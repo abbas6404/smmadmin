@@ -58,3 +58,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/funds/add', [FundsController::class, 'add'])->name('funds.add');
     Route::post('/funds/process', [FundsController::class, 'process'])->name('funds.process');
 });
+
+Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
+    // API Documentation
+    Route::get('/api/docs', function () {
+        return view('backend.api.docs');
+    })->name('api.docs');
+});

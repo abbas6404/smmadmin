@@ -89,7 +89,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Search</label>
                         <input type="text" class="form-control" name="search" value="{{ request('search') }}" 
-                               placeholder="Search by PC name or Hardware ID...">
+                               placeholder="Search by PC name...">
                     </div>
                     <!-- Status Filter -->
                     <div class="col-md-3 mb-3">
@@ -127,11 +127,13 @@
                         <tr>
                             <th>ID</th>
                             <th>PC Name</th>
-                            <th>Hardware ID</th>
-                            <th>Profile Limit</th>
-                            <th>Link Limit</th>
+                            <th>Hostname</th>
+                            <th>OS Version</th>
+                            <th>Max Profile Limit</th>
+                            <th>Max Order Limit</th>
+                            <th>Min Order Limit</th>
                             <th>Status</th>
-                            <th>Created At</th>
+                            <th>Last Verified At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -140,9 +142,11 @@
                         <tr class="{{ $profile->trashed() ? 'table-danger' : '' }}">
                             <td>{{ $profile->id }}</td>
                             <td>{{ $profile->pc_name }}</td>
-                            <td>{{ $profile->hardware_id }}</td>
+                            <td>{{ $profile->hostname }}</td>
+                            <td>{{ $profile->os_version }}</td>
                             <td>{{ $profile->max_profile_limit }}</td>
-                            <td>{{ $profile->max_link_limit }}</td>
+                            <td>{{ $profile->max_order_limit }}</td>
+                            <td>{{ $profile->min_order_limit }}</td>
                             <td>
                                 <span class="badge bg-{{
                                     $profile->status == 'active' ? 'success' :
@@ -153,7 +157,7 @@
                                     {{ ucfirst($profile->status) }}
                                 </span>
                             </td>
-                            <td>{{ $profile->created_at->format('Y-m-d H:i') }}</td>
+                            <td>{{ $profile->last_verified_at ? $profile->last_verified_at->format('Y-m-d H:i') : 'Never' }}</td>
                             <td>
                                 <div class="d-flex gap-1">
                                     <a href="{{ route('admin.pc-profiles.show', $profile->id) }}" class="btn btn-sm btn-info" title="View"><i class="fas fa-eye"></i></a>

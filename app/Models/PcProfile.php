@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class PcProfile extends Model
 {
@@ -18,10 +19,30 @@ class PcProfile extends Model
      */
     protected $fillable = [
         'pc_name',
+        'email',
+        'password',
         'hardware_id',
+        'device_name',
+        'hostname',
+        'os_version',
+        'user_agent',
+        'profile_root_directory',
+        'status',
+        'access_token',
+        'last_verified_at',
+        'last_used_at',
         'max_profile_limit',
-        'max_link_limit',
-        'status'
+        'max_order_limit',
+        'min_order_limit'
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
     ];
 
     /**
@@ -30,8 +51,8 @@ class PcProfile extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'max_profile_limit' => 'integer',
-        'max_link_limit' => 'integer'
+        'last_verified_at' => 'datetime',
+        'last_used_at' => 'datetime'
     ];
 
     /**
@@ -87,7 +108,7 @@ class PcProfile extends Model
      */
     public function isProfileLimitReached(int $currentProfiles): bool
     {
-        return $currentProfiles >= $this->max_profile_limit;
+        return $currentProfiles >= $this->max_chrome_profiles;
     }
 
     /**
@@ -95,14 +116,91 @@ class PcProfile extends Model
      */
     public function isLinkLimitReached(int $currentLinks): bool
     {
-        return $currentLinks >= $this->max_link_limit;
+        return $currentLinks >= $this->max_gmail_accounts;
     }
 
     /**
      * Get count of active Chrome profiles
      */
-    public function getActiveProfilesCount(): int
+    public function getActiveChromesCount(): int
     {
-        return $this->chromeProfiles()->where('status', 'active')->count();
+        return $this->chromeProfiles()
+            ->where('status', 'active')
+            ->count();
+    }
+
+    /**
+     * Get count of active Gmail accounts
+     */
+    public function getActiveGmailsCount(): int
+    {
+        return $this->gmailAccounts()
+            ->where('status', 'active')
+            ->count();
+    }
+
+    /**
+     * Get count of active Facebook accounts
+     */
+    public function getActiveFacebooksCount(): int
+    {
+        return $this->facebookAccounts()
+            ->where('status', 'active')
+            ->count();
+    }
+
+    /**
+     * Update last used timestamp
+     */
+    public function updateLastUsed(): bool
+    {
+        return $this->update(['last_used_at' => now()]);
+    }
+
+    /**
+     * Scope a query to only include active profiles
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope a query to only include inactive profiles
+     */
+    public function scopeInactive($query)
+    {
+        return $query->where('status', 'inactive');
+    }
+
+    public function activate()
+    {
+        $this->update([
+            'status' => 'active',
+            'last_used_at' => now(),
+        ]);
+    }
+
+    public function deactivate()
+    {
+        $this->update([
+            'status' => 'inactive',
+            'last_used_at' => now(),
+        ]);
+    }
+
+    public function hasAvailableChromeProfiles()
+    {
+        return $this->chromeProfiles()->count() < $this->max_chrome_profiles;
+    }
+
+    public function hasAvailableGmailAccounts()
+    {
+        return $this->gmailAccounts()->count() < $this->max_gmail_accounts;
+    }
+
+    public function hasAvailableFacebookAccounts()
+    {
+        return $this->facebookAccounts()->count() < $this->max_facebook_accounts;
     }
 } 

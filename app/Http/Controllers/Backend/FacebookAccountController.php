@@ -251,7 +251,7 @@ class FacebookAccountController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'pc_profile_id' => 'nullable|exists:pc_profiles,id',
+            'pc_profile_id' => 'required|exists:pc_profiles,id',
             'batch_type' => 'required|in:existing,new',
             'submission_batch_id' => 'required_if:batch_type,existing|exists:submission_batch,id',
             'new_batch_name' => 'required_if:batch_type,new|string|max:255',
@@ -307,7 +307,7 @@ class FacebookAccountController extends Controller
                     'pc_profile_id' => $validated['pc_profile_id'],
                     'submission_batch_id' => $submissionBatchId,
                     'email' => $email,
-                    'password' => Hash::make($password),
+                    'password' => $password,
                     'total_count' => 0,
                     'have_use' => false,
                     'have_page' => false,

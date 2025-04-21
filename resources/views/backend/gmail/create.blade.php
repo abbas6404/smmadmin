@@ -19,9 +19,9 @@
                 <div class="row">
                     <!-- PC Profile Selection -->
                     <div class="col-md-6 mb-3">
-                        <label for="pc_profile_id" class="form-label">PC Profile</label>
-                        <select name="pc_profile_id" id="pc_profile_id" class="form-control @error('pc_profile_id') is-invalid @enderror">
-                            <option value="">All PCs</option>
+                        <label for="pc_profile_id" class="form-label required">PC Profile</label>
+                        <select name="pc_profile_id" id="pc_profile_id" class="form-control @error('pc_profile_id') is-invalid @enderror" required>
+                            <option value="">Select PC Profile</option>
                             @foreach($pcProfiles as $profile)
                                 <option value="{{ $profile->id }}" {{ old('pc_profile_id') == $profile->id ? 'selected' : '' }}>
                                     {{ $profile->pc_name }} ({{ $profile->hardware_id }})
@@ -31,7 +31,7 @@
                         @error('pc_profile_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <div class="form-text">Select 'All PCs' to make this account available to all PCs, or select a specific PC to restrict it.</div>
+                        <div class="form-text">Select a PC profile to associate with this Gmail account.</div>
                     </div>
 
                     <!-- Batch Selection Type -->

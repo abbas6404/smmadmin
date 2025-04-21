@@ -28,7 +28,7 @@ class GmailAccountSeeder extends Seeder
                 'chrome_profile_id' => $chromeProfiles[array_rand($chromeProfiles)],
                 'submission_batch_id' => !empty($submissionBatches) ? $submissionBatches[array_rand($submissionBatches)] : null,
                 'email' => 'gmail' . $i . '@gmail.com',
-                'password' => bcrypt('password123'),
+                'password' => 'aio19134',
                 'total_count' => rand(0, 100),
                 'have_use' => rand(0, 1),
                 'have_page' => rand(0, 1),

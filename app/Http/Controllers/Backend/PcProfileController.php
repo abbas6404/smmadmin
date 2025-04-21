@@ -7,6 +7,7 @@ use App\Models\PcProfile;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class PcProfileController extends Controller
 {
@@ -70,15 +71,66 @@ class PcProfileController extends Controller
     {
         $validated = $request->validate([
             'pc_name' => 'required|string|max:255',
-            'hardware_id' => 'required|string|max:255|unique:pc_profiles,hardware_id',
+            'email' => 'required|email|max:255',
+            'hardware_id' => 'nullable|string|max:255',
+            'hostname' => 'nullable|string|max:255',
+            'os_version' => 'nullable|string|max:255',
+            'user_agent' => ['nullable', 'string', 'regex:/^\d+-\d+$/', function ($attribute, $value, $fail) {
+                $numbers = explode('-', $value);
+                if (count($numbers) !== 2) {
+                    $fail('The user agent must contain exactly two numbers separated by a hyphen.');
+                    return;
+                }
+                if (!is_numeric($numbers[0]) || !is_numeric($numbers[1])) {
+                    $fail('Both values must be numbers.');
+                    return;
+                }
+                if ($numbers[0] >= $numbers[1]) {
+                    $fail('The first number must be less than the second number.');
+                }
+            }],
+            'drive' => 'required|string|in:C,D,E,F',
+            'profile_root_directory' => 'required|string|max:255',
             'max_profile_limit' => 'required|integer|min:1',
-            'max_link_limit' => 'required|integer|min:1',
-            'status' => ['required', Rule::in(['active', 'inactive', 'blocked'])]
+            'max_order_limit' => 'required|integer|min:1',
+            'min_order_limit' => 'required|integer|min:1',
+            'password' => 'required|string|min:8|confirmed'
         ]);
 
-        PcProfile::create($validated);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.pc-profiles.index')->with('success', 'PC Profile created successfully.');
+            // Hash the password
+            $validated['password'] = Hash::make($validated['password']);
+            
+            // Always set status as inactive for new profiles
+            $validated['status'] = 'inactive';
+
+            // Combine drive and folder name, ensuring no extra backslashes
+            $folderName = trim($validated['profile_root_directory'], '\\/');
+            $validated['profile_root_directory'] = $validated['drive'] . ':\\' . $folderName;
+            unset($validated['drive']);
+
+            // Create the profile first to get the ID
+            $pcProfile = PcProfile::create($validated);
+
+            // Update the pc_name with the ID prefix
+            $pcProfile->update([
+                'pc_name' => "#{$pcProfile->id}_{$validated['pc_name']}"
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.pc-profiles.index')
+                ->with('success', 'PC Profile created successfully with inactive status.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors([
+                'create' => 'An error occurred while creating the PC Profile. Please try again.'
+            ]);
+        }
     }
 
     /**
@@ -104,42 +156,74 @@ class PcProfileController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id) // Use string ID
+    public function update(Request $request, string $id)
     {
         // Find profile including soft-deleted ones
         $pcProfile = PcProfile::withTrashed()->findOrFail($id);
 
         $validated = $request->validate([
             'pc_name' => 'required|string|max:255',
-            'hardware_id' => ['required', 'string', 'max:255', Rule::unique('pc_profiles')->ignore($pcProfile->id)],
+            'email' => 'required|email|max:255',
+            'hardware_id' => ['nullable', 'string', 'max:255', Rule::unique('pc_profiles')->ignore($pcProfile->id)],
+            'hostname' => ['nullable', 'string', 'max:255', Rule::unique('pc_profiles')->ignore($pcProfile->id)],
+            'os_version' => ['nullable', Rule::in(['Windows 10 Home', 'Windows 10 Pro', 'Windows 11 Home', 'Windows 11 Pro'])],
+            'user_agent' => ['nullable', 'string', 'regex:/^\d+-\d+$/', function ($attribute, $value, $fail) {
+                $numbers = explode('-', $value);
+                if (count($numbers) !== 2) {
+                    $fail('The user agent must contain exactly two numbers separated by a hyphen.');
+                    return;
+                }
+                if (!is_numeric($numbers[0]) || !is_numeric($numbers[1])) {
+                    $fail('Both values must be numbers.');
+                    return;
+                }
+                if ($numbers[0] >= $numbers[1]) {
+                    $fail('The first number must be less than the second number.');
+                }
+            }],
+            'drive' => 'required|string|in:C,D,E,F',
+            'profile_root_directory' => 'required|string|max:255',
             'max_profile_limit' => 'required|integer|min:1',
-            'max_link_limit' => 'required|integer|min:1',
-            'status' => ['required', Rule::in(['active', 'inactive', 'blocked', 'deleted'])] // Include deleted status
+            'max_order_limit' => 'required|integer|min:1',
+            'min_order_limit' => 'required|integer|min:1',
+            'status' => ['required', Rule::in(['active', 'inactive', 'blocked'])],
+            'password' => 'nullable|string|min:8|confirmed'
         ]);
 
-        // If status is changed to 'deleted', perform soft delete
-        if ($validated['status'] === 'deleted' && !$pcProfile->trashed()) {
-            $pcProfile->status = 'deleted';
-            $pcProfile->save();
-            $pcProfile->delete(); // Soft delete
+        try {
+            DB::beginTransaction();
+
+            // If password is being changed, set status to inactive
+            if (!empty($validated['password'])) {
+                $validated['password'] = Hash::make($validated['password']);
+                $validated['status'] = 'inactive';
+            } else {
+                unset($validated['password']);
+            }
+
+            // Combine drive and folder name, ensuring no extra backslashes
+            $folderName = trim($validated['profile_root_directory'], '\\/');
+            $validated['profile_root_directory'] = $validated['drive'] . ':\\' . $folderName;
+            unset($validated['drive']);
+
+            // Update the profile
+            $pcProfile->update($validated);
+
+            DB::commit();
+
+            $message = !empty($request->password) 
+                ? 'PC Profile updated successfully. Status set to inactive due to password change.'
+                : 'PC Profile updated successfully.';
+
             return redirect()
                 ->route('admin.pc-profiles.index')
-                ->with('success', 'PC Profile marked as deleted and soft-deleted.');
-        } 
-        // If status is changed FROM 'deleted' to something else, restore the profile
-        elseif ($validated['status'] !== 'deleted' && $pcProfile->trashed()) {
-             $pcProfile->restore(); // Restore from soft delete
-             $pcProfile->update($validated); // Update other fields including new status
-             return redirect()
-                ->route('admin.pc-profiles.index')
-                ->with('success', 'PC Profile restored and updated successfully.');
-        }
-        // Otherwise, just update normally
-        else {
-            $pcProfile->update($validated);
-             return redirect()
-                ->route('admin.pc-profiles.index')
-                ->with('success', 'PC Profile updated successfully.');
+                ->with('success', $message);
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors([
+                'update' => 'An error occurred while updating the PC Profile. Please try again.'
+            ]);
         }
     }
 
