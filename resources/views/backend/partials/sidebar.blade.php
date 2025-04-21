@@ -91,6 +91,17 @@
             <span>Gmail Accounts</span>
         </a>
 
+        <a href="#apiSubmenu" class="sidebar-link {{ request()->routeIs('admin.api.*') ? 'active' : '' }}" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs('admin.api.*') ? 'true' : 'false' }}" data-title="API Documentation">
+            <i class="fas fa-code"></i>
+            <span>API Documentation</span>
+            <i class="fas fa-chevron-right arrow"></i>
+        </a>
+        <div class="collapse submenu {{ request()->routeIs('admin.api.*') ? 'show' : '' }}" id="apiSubmenu">
+            <a href="{{ route('admin.api.docs') }}" class="sidebar-link {{ request()->routeIs('admin.api.docs') ? 'active' : '' }}">
+                <span>My API Docs</span>
+            </a>
+        </div>
+
     </div>
 
     <div class="nav-section">Settings</div>
