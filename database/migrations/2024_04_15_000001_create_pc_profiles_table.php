@@ -13,11 +13,22 @@ return new class extends Migration
     {
         Schema::create('pc_profiles', function (Blueprint $table) {
             $table->id();
-            $table->string('pc_name');
-            $table->string('hardware_id')->unique();
-            $table->integer('max_profile_limit')->default(1);
-            $table->integer('max_link_limit')->default(10);
-            $table->enum('status', ['active', 'inactive', 'blocked', 'deleted'])->default('active');
+            $table->string('pc_name')->nullable();
+            $table->string('email');
+            $table->string('password');
+            $table->string('hostname')->nullable();
+            $table->string('os_version')->nullable();
+            $table->string('user_agent')->nullable();
+            $table->string('profile_root_directory')->nullable();
+            $table->string('hardware_id')->unique()->nullable();
+            $table->string('access_token', 64)->unique()->nullable();
+            $table->enum('status', ['active', 'inactive', 'blocked', 'deleted'])->default('inactive');
+            $table->integer('max_profile_limit')->default(6);
+            $table->integer('max_order_limit')->default(5);
+            $table->integer('min_profile_limit')->default(1);
+            $table->integer('min_order_limit')->default(1);
+            $table->json('system_info')->nullable();
+            $table->timestamp('last_verified_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

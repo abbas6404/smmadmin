@@ -2,6 +2,10 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\PcAuthController;
+use App\Http\Controllers\Api\FacebookAccountController;
+use App\Http\Controllers\Api\UpdateFacebookAccountController;
+use App\Http\Controllers\Api\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,4 +20,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
-}); 
+});
+
+// PC Authentication Routes
+Route::post('/generate-token', [PcAuthController::class, 'generateToken']);
+Route::post('/get-profile', [PcAuthController::class, 'getProfile']);
+
+// Facebook Account Routes
+Route::get('/pending-facebook-accounts', [FacebookAccountController::class, 'getPendingAccounts']);
+Route::post('/update-facebook-account', [UpdateFacebookAccountController::class, 'update']);
+
+// Order Routes
+Route::get('/orders', [OrderController::class, 'getOrders']); 

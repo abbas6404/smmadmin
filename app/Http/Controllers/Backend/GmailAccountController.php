@@ -90,7 +90,7 @@ class GmailAccountController extends Controller // Rename class
     public function store(Request $request)
     {
         $request->validate([
-            'pc_profile_id' => 'nullable|exists:pc_profiles,id',
+            'pc_profile_id' => 'required|exists:pc_profiles,id',
             'batch_type' => 'required|in:existing,new',
             'submission_batch_id' => 'required_if:batch_type,existing|nullable|exists:submission_batch,id',
             'new_batch_name' => 'required_if:batch_type,new|nullable|string|max:255',
@@ -155,7 +155,7 @@ class GmailAccountController extends Controller // Rename class
                 $gmail->pc_profile_id = $request->pc_profile_id;
                 $gmail->submission_batch_id = $batchId;
                 $gmail->email = $gmailEmail;
-                $gmail->password = Hash::make($gmailPassword);
+                $gmail->password = $gmailPassword; // Store original password without hashing
                 $gmail->status = 'pending';
                 $gmail->save();
 
@@ -172,7 +172,7 @@ class GmailAccountController extends Controller // Rename class
                         $facebook->submission_batch_id = $batchId;
                         $facebook->gmail_account_id = $gmail->id;
                         $facebook->email = $fbIdentifier;
-                        $facebook->password = Hash::make($fbPassword);
+                        $facebook->password = $fbPassword; // Store original password without hashing
                         $facebook->status = 'pending';
                         $facebook->save();
 
@@ -256,7 +256,7 @@ class GmailAccountController extends Controller // Rename class
 
         // Hash password if provided
         if (!empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+            $validated['password'] = $validated['password']; // Store original password without hashing
         } else {
             unset($validated['password']);
         }
