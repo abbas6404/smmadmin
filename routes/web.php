@@ -64,4 +64,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::get('/api/docs', function () {
         return view('backend.api.docs');
     })->name('api.docs');
+
+    // Submission Batch Routes
+    Route::get('submission-batch/{submissionBatch}/update-count', [\App\Http\Controllers\Backend\SubmissionBatchController::class, 'updateCount'])
+        ->name('submission-batch.update-count');
+
+    // Disk Management Routes
+    Route::resource('disks', \App\Http\Controllers\Backend\DiskController::class);
 });

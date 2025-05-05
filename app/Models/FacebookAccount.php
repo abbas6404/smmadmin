@@ -22,6 +22,7 @@ class FacebookAccount extends Model
         'submission_batch_id',
         'email',
         'password',
+        'two_factor_secret',
         'total_count',
         'have_use',
         'have_page',

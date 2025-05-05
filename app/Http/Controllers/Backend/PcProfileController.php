@@ -138,8 +138,8 @@ class PcProfileController extends Controller
      */
     public function show(string $id) // Use string ID
     {
-        // Find profile including soft-deleted ones
-        $pcProfile = PcProfile::withTrashed()->findOrFail($id); 
+        // Find profile including soft-deleted ones and load disks
+        $pcProfile = PcProfile::withTrashed()->with('disks')->findOrFail($id); 
         return view('backend.pc_profile.show', compact('pcProfile'));
     }
 

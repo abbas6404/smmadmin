@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             PcProfileSeeder::class,
             ChromeProfileSeeder::class,
+            DiskSeeder::class,
             SubmissionBatchSeeder::class,
             GmailAccountSeeder::class,
             FacebookAccountSeeder::class,
