@@ -85,18 +85,18 @@
 
                     <!-- Email and Password Input -->
                     <div class="col-md-12 mb-3">
-                        <label for="accounts" class="form-label required">Email|Password Combinations</label>
+                        <label for="accounts" class="form-label required">Email|Password|2FA Combinations</label>
                         <textarea name="accounts" id="accounts" class="form-control @error('accounts') is-invalid @enderror" 
-                                rows="10" required placeholder="Enter one identifier|password combination per line, example:&#10;user1@gmail.com|password1&#10;692394938783|password2">{{ old('accounts') }}</textarea>
+                                rows="10" required placeholder="Enter one identifier|password|2fa combination per line, example:&#10;user1@gmail.com|password1|2FA_SECRET&#10;692394938783|password2|2FA_SECRET">{{ old('accounts') }}</textarea>
                         @error('accounts')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         <div class="form-text">
-                            Enter each account on a new line in the format: identifier|password<br>
+                            Enter each account on a new line in the format: identifier|password|2fa<br>
                             The identifier can be an email address or a user ID.<br>
                             Examples:<br>
-                            user1@gmail.com|password123<br>
-                            692394938783|password456
+                            user1@gmail.com|password123|K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS<br>
+                            692394938783|password456|K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS
                         </div>
                     </div>
                 </div>

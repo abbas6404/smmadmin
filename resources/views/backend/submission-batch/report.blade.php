@@ -157,7 +157,10 @@
         @php
             $inactiveAccounts = $submissionBatch->facebookAccounts->where('status', 'inactive');
             $activeAccounts = $submissionBatch->facebookAccounts->where('status', 'active');
-            $pendingAccounts = $submissionBatch->facebookAccounts->whereIn('status', ['pending', 'processing']);
+            $pendingAccounts = $submissionBatch->facebookAccounts->where('status', 'pending');
+            $processingAccounts = $submissionBatch->facebookAccounts->where('status', 'processing');
+            $logoutAccounts = $submissionBatch->facebookAccounts->where('status', 'logout');
+            $removeAccounts = $submissionBatch->facebookAccounts->where('status', 'remove');
         @endphp
 
         @if($inactiveAccounts->count() > 0)
@@ -184,30 +187,6 @@
             </table>
         @endif
 
-        @if($activeAccounts->count() > 0)
-            <div class="status-section">Active Accounts</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Have Page</th>
-                        <th>Total Count</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($activeAccounts as $account)
-                        <tr>
-                            <td>{{ $account->email }}</td>
-                            <td>Active</td>
-                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
-                            <td>{{ number_format($account->total_count) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-
         @if($pendingAccounts->count() > 0)
             <div class="status-section">Pending Accounts</div>
             <table>
@@ -223,7 +202,79 @@
                     @foreach($pendingAccounts as $account)
                         <tr>
                             <td>{{ $account->email }}</td>
-                            <td>{{ ucfirst($account->status) }}</td>
+                            <td>Pending</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($processingAccounts->count() > 0)
+            <div class="status-section">Processing Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($processingAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Processing</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($logoutAccounts->count() > 0)
+            <div class="status-section">Logout Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($logoutAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Logout</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($removeAccounts->count() > 0)
+            <div class="status-section">Remove Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($removeAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Remove</td>
                             <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
                             <td>{{ number_format($account->total_count) }}</td>
                         </tr>
@@ -237,7 +288,10 @@
         @php
             $inactiveAccounts = $submissionBatch->facebookAccounts->where('status', 'inactive');
             $activeAccounts = $submissionBatch->facebookAccounts->where('status', 'active');
-            $pendingAccounts = $submissionBatch->facebookAccounts->whereIn('status', ['pending', 'processing']);
+            $pendingAccounts = $submissionBatch->facebookAccounts->where('status', 'pending');
+            $processingAccounts = $submissionBatch->facebookAccounts->where('status', 'processing');
+            $logoutAccounts = $submissionBatch->facebookAccounts->where('status', 'logout');
+            $removeAccounts = $submissionBatch->facebookAccounts->where('status', 'remove');
         @endphp
 
         @if($inactiveAccounts->count() > 0)
@@ -264,30 +318,6 @@
             </table>
         @endif
 
-        @if($activeAccounts->count() > 0)
-            <div class="status-section">Active Accounts</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Have Page</th>
-                        <th>Total Count</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($activeAccounts as $account)
-                        <tr>
-                            <td>{{ $account->email }}</td>
-                            <td>Active</td>
-                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
-                            <td>{{ number_format($account->total_count) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-
         @if($pendingAccounts->count() > 0)
             <div class="status-section">Pending Accounts</div>
             <table>
@@ -303,7 +333,79 @@
                     @foreach($pendingAccounts as $account)
                         <tr>
                             <td>{{ $account->email }}</td>
-                            <td>{{ ucfirst($account->status) }}</td>
+                            <td>Pending</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($processingAccounts->count() > 0)
+            <div class="status-section">Processing Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($processingAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Processing</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($logoutAccounts->count() > 0)
+            <div class="status-section">Logout Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($logoutAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Logout</td>
+                            <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
+                            <td>{{ number_format($account->total_count) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($removeAccounts->count() > 0)
+            <div class="status-section">Remove Accounts</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Have Page</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($removeAccounts as $account)
+                        <tr>
+                            <td>{{ $account->email }}</td>
+                            <td>Remove</td>
                             <td>{{ $account->have_page ? 'Yes' : 'No' }}</td>
                             <td>{{ number_format($account->total_count) }}</td>
                         </tr>

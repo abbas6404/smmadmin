@@ -56,7 +56,7 @@ class UpdateFacebookAccountController extends Controller
                 'note' => 'nullable|string',
                 'lang' => ['nullable', 'string', 'max:10', Rule::in(['en', 'bn', 'as', 'ar', 'fr', 'es', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh'])],
                 'account_cookies' => 'nullable|array',
-                'status' => 'required|string|in:active,inactive,remove',
+                'status' => 'required|string|in:active,inactive,remove,pending,processing,logout',
                 'have_use' => 'nullable|boolean',
                 'have_page' => 'nullable|boolean',
                 'have_post' => 'nullable|boolean',

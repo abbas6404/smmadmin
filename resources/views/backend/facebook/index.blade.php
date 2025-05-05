@@ -2,8 +2,56 @@
 
 @section('title', 'Facebook Accounts Management')
 
+@push('styles')
+<!-- SweetAlert2 -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+@endpush
+
 @section('content')
 <div class="container-fluid">
+    <!-- Success Messages -->
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-1"></i>
+        <strong>Success!</strong> {!! nl2br(e(session('success'))) !!}
+        @if(session('created_count'))
+        <div class="mt-2">
+            <i class="fas fa-info-circle"></i> Created {{ session('created_count') }} new Facebook account(s).
+        </div>
+        @endif
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    <!-- Warning Messages -->
+    @if(session('warning'))
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        <strong>Partial Success</strong>
+        <div class="mt-2">
+            <i class="fas fa-check-circle text-success"></i> Successfully created: {{ session('created_count') }} account(s)
+            @if(session('error_count'))
+            <br>
+            <i class="fas fa-exclamation-circle text-danger"></i> Failed: {{ session('error_count') }} account(s)
+        </div>
+        <div class="mt-2">
+            <strong>Details:</strong><br>
+            {!! nl2br(e(session('warning'))) !!}
+        </div>
+        @endif
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    <!-- Error Messages -->
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-times-circle me-1"></i>
+        <strong>Error!</strong> {!! nl2br(e(session('error'))) !!}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Facebook Accounts Management</h1>
         <a href="{{ route('admin.facebook.create') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
@@ -351,4 +399,24 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection
+
+@push('scripts')
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    @if(session('showSwal'))
+        const swalData = @json(json_decode(session('showSwal')));
+        Swal.fire({
+            ...swalData,
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            },
+            allowOutsideClick: false
+        });
+    @endif
+});
+</script>
+@endpush 
