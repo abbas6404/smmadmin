@@ -27,7 +27,8 @@ return new class extends Migration
             $table->integer('max_order_limit')->default(5);
             $table->integer('min_profile_limit')->default(1);
             $table->integer('min_order_limit')->default(1);
-            $table->json('system_info')->nullable();
+            $table->integer('cpu_cores')->nullable();
+            $table->decimal('total_memory', 8, 2)->nullable()->comment('Total memory in GB');
             $table->timestamp('last_verified_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

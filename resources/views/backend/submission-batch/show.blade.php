@@ -13,6 +13,9 @@
                 <a href="{{ route('admin.submission-batch.report', $submissionBatch->id) }}" class="btn btn-info btn-sm me-1" target="_blank">
                     <i class="fas fa-file-pdf"></i> Generate Report
                 </a>
+                <a href="{{ route('admin.submission-batch.update-count', $submissionBatch->id) }}" class="btn btn-primary btn-sm me-1">
+                    <i class="fas fa-sync"></i> Update Count
+                </a>
                 <a href="{{ route('admin.submission-batch.edit', $submissionBatch->id) }}" class="btn btn-warning btn-sm me-1">
                     <i class="fas fa-edit"></i> Edit Batch
                 </a>

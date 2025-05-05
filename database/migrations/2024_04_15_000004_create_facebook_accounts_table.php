@@ -19,11 +19,12 @@ return new class extends Migration
             $table->foreignId('gmail_account_id')->nullable()->constrained('gmail_accounts')->onDelete('set null');
             $table->string('email')->unique();
             $table->string('password');
+            $table->string('two_factor_secret')->nullable();
             $table->integer('total_count')->default(0);
             $table->boolean('have_use')->default(false);
             $table->boolean('have_page')->default(false);
             $table->boolean('have_post')->default(false);
-            $table->enum('status', ['pending', 'processing', 'active', 'inactive', 'remove'])->default('pending');
+            $table->enum('status', ['pending', 'processing', 'active', 'inactive', 'logout', 'remove'])->default('pending'); 
             $table->json('order_link_uid')->nullable();
             $table->string('lang')->nullable();
             $table->text('note')->nullable();

@@ -249,4 +249,58 @@ class SubmissionBatchController extends Controller
                 ->with('error', 'Failed to generate report: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Update the counts for the batch
+     */
+    public function updateCount(SubmissionBatch $submissionBatch)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Calculate counts based on submission type
+            if ($submissionBatch->submission_type === 'facebook') {
+                $totalSubmissions = $submissionBatch->facebookAccounts->count();
+                $accurateSubmissions = $submissionBatch->facebookAccounts->where('status', 'active')->count();
+                $incorrectSubmissions = $submissionBatch->facebookAccounts->whereIn('status', ['inactive', 'blocked', 'logout', 'remove'])->count();
+            } elseif ($submissionBatch->submission_type === 'gmail') {
+                $totalSubmissions = $submissionBatch->gmailAccounts->count();
+                $accurateSubmissions = $submissionBatch->gmailAccounts->where('status', 'active')->count();
+                $incorrectSubmissions = $submissionBatch->gmailAccounts->whereIn('status', ['inactive', 'blocked', 'logout', 'remove'])->count();
+            } elseif ($submissionBatch->submission_type === 'facebook_and_gmail') {
+                // Calculate Facebook stats
+                $facebookTotal = $submissionBatch->facebookAccounts->count();
+                $facebookAccurate = $submissionBatch->facebookAccounts->where('status', 'active')->count();
+                $facebookIncorrect = $submissionBatch->facebookAccounts->whereIn('status', ['inactive', 'blocked', 'logout', 'remove'])->count();
+                
+                // Calculate Gmail stats
+                $gmailTotal = $submissionBatch->gmailAccounts->count();
+                $gmailAccurate = $submissionBatch->gmailAccounts->where('status', 'active')->count();
+                $gmailIncorrect = $submissionBatch->gmailAccounts->whereIn('status', ['inactive', 'blocked', 'logout', 'remove'])->count();
+                
+                // Combined stats
+                $totalSubmissions = $facebookTotal + $gmailTotal;
+                $accurateSubmissions = $facebookAccurate + $gmailAccurate;
+                $incorrectSubmissions = $facebookIncorrect + $gmailIncorrect;
+            }
+
+            // Update the batch with new calculations
+            $submissionBatch->update([
+                'total_submissions' => $totalSubmissions,
+                'accurate_submissions' => $accurateSubmissions,
+                'incorrect_submissions' => $incorrectSubmissions
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.submission-batch.show', $submissionBatch)
+                ->with('success', 'Submission batch counts updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()
+                ->back()
+                ->with('error', 'Failed to update counts: ' . $e->getMessage());
+        }
+    }
 } 
