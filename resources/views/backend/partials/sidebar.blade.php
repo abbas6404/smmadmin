@@ -71,6 +71,11 @@
             <span>PC Profiles</span>
         </a>
 
+        <a href="{{ route('admin.disks.index') }}" class="sidebar-link {{ request()->routeIs('admin.disks.*') ? 'active' : '' }}" data-title="Disks">
+            <i class="fas fa-hdd"></i>
+            <span>Disks</span>
+        </a>
+
         <a href="{{ route('admin.chrome.index') }}" class="sidebar-link {{ request()->routeIs('admin.chrome.*') ? 'active' : '' }}" data-title="Chrome">
             <i class="fab fa-chrome"></i>
             <span>Chrome Profiles</span>

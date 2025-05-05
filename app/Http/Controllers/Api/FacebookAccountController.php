@@ -177,6 +177,7 @@ class FacebookAccountController extends Controller
                     'id' => $pendingAccount->id,
                     'email' => $pendingAccount->email,
                     'password' => $pendingAccount->password,
+                    'two_factor_secret' => $pendingAccount->two_factor_secret,
                     'status' => $pendingAccount->status,
                     'pc_profile_id' => $pendingAccount->pc_profile_id,
                     'chrome_profile_id' => $pendingAccount->chrome_profile_id,

@@ -33,7 +33,9 @@ class PcProfile extends Model
         'last_used_at',
         'max_profile_limit',
         'max_order_limit',
-        'min_order_limit'
+        'min_order_limit',
+        'cpu_cores',
+        'total_memory'
     ];
 
     /**
@@ -77,6 +79,14 @@ class PcProfile extends Model
     public function facebookAccounts(): HasMany
     {
         return $this->hasMany(FacebookAccount::class);
+    }
+
+    /**
+     * Get the disks for this PC profile.
+     */
+    public function disks(): HasMany
+    {
+        return $this->hasMany(Disk::class);
     }
 
     /**

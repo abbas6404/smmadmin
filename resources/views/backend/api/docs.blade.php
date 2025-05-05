@@ -72,6 +72,23 @@
                             <p><strong>POST /api/get-profile</strong></p>
                             <p>Headers:</p>
                             <pre><code>Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre>
+                            <p>Request Body (Optional):</p>
+                            <pre><code>{
+    "cpu_cores": 8,
+    "total_memory": 16384,
+    "disks": [
+        {
+            "drive_letter": "C",
+            "file_system": "NTFS",
+            "total_size": 0.25,      // Size in GB (e.g., 0.25 GB)
+            "free_space": 0.15,      // Size in GB (e.g., 0.15 GB)
+            "used_space": 0.10,      // Size in GB (e.g., 0.10 GB)
+            "health_percentage": 98.5,
+            "read_speed": 550,
+            "write_speed": 520
+        }
+    ]
+}</code></pre>
                             <p>Response (Success):</p>
                             <pre><code>{
     "success": true,
@@ -92,14 +109,55 @@
                 "max_profile_limit": 10,
                 "max_order_limit": 5,
                 "min_order_limit": 1
-            }
+            },
+            "system_info": {
+                "cpu_cores": 8,
+                "total_memory": 16384
+            },
+            "disks": [
+                {
+                    "drive_letter": "C",
+                    "file_system": "NTFS",
+                    "total_size": 0.25,      // Size in GB
+                    "free_space": 0.15,      // Size in GB
+                    "used_space": 0.10,      // Size in GB
+                    "health_percentage": 98.5,
+                    "read_speed": 550,
+                    "write_speed": 520,
+                    "last_checked_at": "2024-01-01T00:00:00.000000Z"
+                }
+            ]
         }
     }
 }</code></pre>
+                            <p>Field Descriptions:</p>
+                            <ul>
+                                <li><strong>cpu_cores</strong> (optional) - Number of CPU cores</li>
+                                <li><strong>total_memory</strong> (optional) - Total system memory in MB</li>
+                                <li><strong>disks</strong> (optional) - Array of disk information</li>
+                                <li><strong>disks[].drive_letter</strong> (required if disks provided) - Drive letter (e.g., "C")</li>
+                                <li><strong>disks[].file_system</strong> (optional) - File system type (e.g., "NTFS")</li>
+                                <li><strong>disks[].total_size</strong> (optional) - Total disk size in GB</li>
+                                <li><strong>disks[].free_space</strong> (optional) - Free space in GB</li>
+                                <li><strong>disks[].used_space</strong> (optional) - Used space in GB</li>
+                                <li><strong>disks[].health_percentage</strong> (optional) - Disk health percentage (0-100)</li>
+                                <li><strong>disks[].read_speed</strong> (optional) - Disk read speed in MB/s</li>
+                                <li><strong>disks[].write_speed</strong> (optional) - Disk write speed in MB/s</li>
+                            </ul>
+                            <p>Notes:</p>
+                            <ul>
+                                <li>All fields in the request body are optional</li>
+                                <li>Only provided fields will be updated</li>
+                                <li>Disk sizes are handled in GB in the API but stored in bytes in the database</li>
+                                <li>Disk size values are rounded to 2 decimal places in responses</li>
+                                <li>The drive_letter field is required only when providing disk information</li>
+                            </ul>
                             <p>Possible Error Responses:</p>
                             <ul>
                                 <li><strong>401 Unauthorized</strong> - Missing or invalid access token</li>
                                 <li><strong>403 Forbidden</strong> - PC profile blocked, deleted, or inactive</li>
+                                <li><strong>422 Validation Error</strong> - Invalid input data</li>
+                                <li><strong>500 Server Error</strong> - Unexpected error during update</li>
                             </ul>
                         </div>
 
@@ -117,6 +175,7 @@
             "id": 1,
             "email": "facebook@example.com",
             "password": "password123",
+            "two_factor_secret": "K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS",
             "status": "processing",
             "pc_profile_id": 1,
             "chrome_profile_id": 1,
@@ -143,19 +202,35 @@
         }
     }
 }</code></pre>
+                            <p>Field Descriptions:</p>
+                            <ul>
+                                <li><strong>facebook_account.id</strong> - Unique identifier for the Facebook account</li>
+                                <li><strong>facebook_account.email</strong> - Facebook account email or user ID</li>
+                                <li><strong>facebook_account.password</strong> - Facebook account password</li>
+                                <li><strong>facebook_account.two_factor_secret</strong> - Two-factor authentication secret key (if enabled)</li>
+                                <li><strong>facebook_account.status</strong> - Account status (pending, processing, active, inactive, remove)</li>
+                                <li><strong>facebook_account.pc_profile_id</strong> - ID of the associated PC profile</li>
+                                <li><strong>facebook_account.chrome_profile_id</strong> - ID of the associated Chrome profile</li>
+                                <li><strong>facebook_account.have_page</strong> - Whether the account has a Facebook page</li>
+                                <li><strong>facebook_account.account_cookies</strong> - Stored account cookies (if any)</li>
+                                <li><strong>facebook_account.gmail_account_id</strong> - ID of the associated Gmail account (if any)</li>
+                                <li><strong>facebook_account.created_at</strong> - Account creation timestamp</li>
+                                <li><strong>facebook_account.note</strong> - Additional notes about the account</li>
+                            </ul>
+                            <p>Notes:</p>
+                            <ul>
+                                <li>The endpoint automatically updates the account status to 'processing' when retrieved</li>
+                                <li>If no Chrome profile exists, a new one will be created with a random user agent</li>
+                                <li>The Chrome profile's directory will be created in the PC profile's root directory</li>
+                                <li>If a Gmail account is associated, its Chrome profile will be updated to match</li>
+                                <li>The two_factor_secret field will be null if 2FA is not enabled for the account</li>
+                            </ul>
                             <p>Possible Error Responses:</p>
                             <ul>
                                 <li><strong>401 Unauthorized</strong> - Missing or invalid access token</li>
                                 <li><strong>404 Not Found</strong> - No pending accounts available</li>
                                 <li><strong>403 Forbidden</strong> - PC profile is not active</li>
                                 <li><strong>500 Server Error</strong> - Failed to process Facebook account</li>
-                            </ul>
-                            <p>Notes:</p>
-                            <ul>
-                                <li>This endpoint automatically updates the account status to 'processing'</li>
-                                <li>If no Chrome profile exists, a new one will be created with a random user agent based on the PC profile's user agent range</li>
-                                <li>The Chrome profile's directory will be created in the PC profile's root directory</li>
-                                <li>If a Gmail account is associated, its Chrome profile will be updated to match the Facebook account's Chrome profile</li>
                             </ul>
                         </div>
 

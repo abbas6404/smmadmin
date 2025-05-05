@@ -288,13 +288,19 @@ class FacebookAccountController extends Controller
 
             // Split the line into email and password
             $parts = explode('|', $line);
-            if (count($parts) !== 2) {
-                $errors[] = "Invalid format for line: {$line}. Expected format: email|password";
+            if (count($parts) < 2 || count($parts) > 3) {
+                $errors[] = "Invalid format for line: {$line}. Expected format: uid|password[|2fa]";
                 continue;
             }
 
             $email = trim($parts[0]);
             $password = trim($parts[1]);
+            $twoFactorSecret = isset($parts[2]) ? trim($parts[2]) : null;
+            
+            // Convert empty 2FA to null
+            if ($twoFactorSecret === '') {
+                $twoFactorSecret = null;
+            }
 
             // Check if identifier already exists
             if (FacebookAccount::withTrashed()->where('email', $email)->exists()) {
@@ -308,6 +314,7 @@ class FacebookAccountController extends Controller
                     'submission_batch_id' => $submissionBatchId,
                     'email' => $email,
                     'password' => $password,
+                    'two_factor_secret' => $twoFactorSecret,
                     'total_count' => 0,
                     'have_use' => false,
                     'have_page' => false,
@@ -329,21 +336,109 @@ class FacebookAccountController extends Controller
         }
 
         if ($created > 0) {
-            $message = "{$created} account(s) created successfully.";
             if (!empty($errors)) {
-                $message .= " However, there were some errors: " . implode("; ", $errors);
+                // Format errors for copying - extract just the IDs
+                $failedIds = [];
+                foreach ($errors as $error) {
+                    if (preg_match('/Identifier already exists: (\d+)/', $error, $matches)) {
+                        $failedIds[] = $matches[1];
+                    }
+                }
+                
+                $copyText = implode("\n", array_map(function($id) {
+                    return $id . "|pass1234|K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS";
+                }, $failedIds));
+
+                $swalData = [
+                    'icon' => 'warning',
+                    'title' => 'Partial Success',
+                    'html' => "<div class='text-left'>
+                        <p class='mb-2'><i class='fas fa-check-circle text-success'></i> Successfully created: {$created} account(s)</p>
+                        <p class='mb-2'><i class='fas fa-times-circle text-danger'></i> Failed: " . count($errors) . " account(s)</p>
+                        <div class='alert alert-warning'>
+                            <div class='d-flex justify-content-between align-items-center mb-2'>
+                                <strong>Failed Accounts:</strong>
+                                <button class='btn btn-sm btn-primary copy-btn' onclick='copyFailedAccounts()'>Copy All</button>
+                            </div>
+                            <div class='failed-accounts-list' style='max-height: 200px; overflow-y: auto;'>
+                                " . implode("<br/>", array_map(function($id) {
+                                    return "<div class='failed-account'>{$id}|pass1234|K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS</div>";
+                                }, $failedIds)) . "
+                            </div>
+                            <input type='hidden' id='copyArea' value='" . htmlspecialchars($copyText) . "'>
+                        </div>
+                    </div>
+                    <script>
+                    async function copyFailedAccounts() {
+                        const copyText = document.getElementById('copyArea').value;
+                        try {
+                            await navigator.clipboard.writeText(copyText);
+                            const copyBtn = Swal.getHtmlContainer().querySelector('.copy-btn');
+                            copyBtn.textContent = 'Copied!';
+                            copyBtn.classList.remove('btn-primary');
+                            copyBtn.classList.add('btn-success');
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Copy All';
+                                copyBtn.classList.remove('btn-success');
+                                copyBtn.classList.add('btn-primary');
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Failed to copy text: ', err);
+                            const copyBtn = Swal.getHtmlContainer().querySelector('.copy-btn');
+                            copyBtn.textContent = 'Copy Failed';
+                            copyBtn.classList.remove('btn-primary');
+                            copyBtn.classList.add('btn-danger');
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Copy All';
+                                copyBtn.classList.remove('btn-danger');
+                                copyBtn.classList.add('btn-primary');
+                            }, 2000);
+                        }
+                    }
+                    </script>
+                    <style>
+                    .failed-account {
+                        font-family: monospace;
+                        padding: 2px 4px;
+                        background: #f8f9fa;
+                        border-radius: 4px;
+                        margin: 2px 0;
+                        white-space: nowrap;
+                    }
+                    .failed-accounts-list {
+                        border: 1px solid #dee2e6;
+                        border-radius: 4px;
+                        padding: 8px;
+                        background: white;
+                    }
+                    </style>"
+                ];
+                
                 return redirect()
                     ->route('admin.facebook.index')
-                    ->with('warning', $message);
+                    ->with('showSwal', json_encode($swalData));
             }
+            
+            $swalData = [
+                'icon' => 'success',
+                'title' => 'Success!',
+                'text' => "{$created} Facebook account(s) created successfully."
+            ];
+
             return redirect()
                 ->route('admin.facebook.index')
-                ->with('success', $message);
+                ->with('showSwal', json_encode($swalData));
         }
+
+        $swalData = [
+            'icon' => 'error',
+            'title' => 'Error!',
+            'text' => 'No accounts were created. ' . implode("\n", $errors)
+        ];
 
         return redirect()
             ->route('admin.facebook.create')
             ->withInput()
-            ->withErrors(['accounts' => 'No accounts were created. ' . implode("; ", $errors)]);
+            ->with('showSwal', json_encode($swalData));
     }
 }

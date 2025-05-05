@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('chrome_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pc_profile_id')->constrained()->onDelete('cascade');
-            $table->string('profile_directory');
-            $table->text('user_agent');
+            $table->string('profile_directory')->unique()->nullable();
+            $table->text('user_agent')->nullable();
             $table->enum('status', ['pending', 'active', 'inactive', 'remove'])->default('pending');
             $table->timestamps();
             $table->softDeletes();
