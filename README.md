@@ -1,6 +1,6 @@
 # SMM Admin Panel
 
-A comprehensive Social Media Marketing (SMM) administration panel built with Laravel, featuring account management for Facebook and Gmail, Chrome profile management, and order processing capabilities.
+A comprehensive Social Media Marketing (SMM) administration panel built with Laravel, featuring account management for Facebook and Gmail, Chrome profile management, order processing capabilities, and a Facebook Quick Check API for Chrome extensions.
 
 ## Features
 
@@ -9,6 +9,7 @@ A comprehensive Social Media Marketing (SMM) administration panel built with Lar
   - Gmail account management
   - Chrome profile management
   - Batch submission handling
+  - Facebook Quick Check for account validation
 
 - **User Management**
   - User registration and authentication
@@ -27,6 +28,12 @@ A comprehensive Social Media Marketing (SMM) administration panel built with Lar
   - Account status monitoring
   - Activity logs
 
+- **API Integrations**
+  - PC profile authentication API
+  - Facebook account management API
+  - Order processing API
+  - Facebook Quick Check API for Chrome extensions
+
 ## Requirements
 
 - PHP >= 8.1
@@ -39,7 +46,7 @@ A comprehensive Social Media Marketing (SMM) administration panel built with Lar
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/abbas6404/smm_controller.git
+git clone https://github.com/abbas6404/smmadmin.git
 ```
 
 2. Install PHP dependencies:
@@ -76,6 +83,35 @@ php artisan migrate --seed
 ```bash
 php artisan serve
 ```
+
+## API Documentation
+
+The application includes several APIs for integration with external systems:
+
+- **PC Profile API**: Authentication and management of PC profiles
+- **Facebook Account API**: CRUD operations for Facebook accounts
+- **Order Management API**: Order processing and status updates
+- **Facebook Quick Check API**: API for Chrome extensions to validate Facebook accounts
+
+API documentation is available in the admin panel at `/admin/api/docs`.
+
+## Facebook Quick Check API
+
+This API allows Chrome extensions to get and update Facebook accounts for validation:
+
+### Endpoints
+
+- **GET /api/facebook-quick-check/get-account**: Retrieve a pending account for checking
+- **POST /api/facebook-quick-check/update-check/{id}**: Update an account's status after checking
+
+### Authentication
+
+All Facebook Quick Check API requests require an API key in the header:
+```
+X-API-KEY: YOUR_API_KEY
+```
+
+Configure your API key in `config/services.php` or via the `.env` file.
 
 ## Usage
 
