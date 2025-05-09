@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'facebook_quick_check' => [
+        'api_key' => 'OnAepmaj9ktXD3LB79Rjv0EMZTXhKpHtdWm5byKibx7lIo4p8pjyK2hZAeItweg8',
+    ],
+
 ];

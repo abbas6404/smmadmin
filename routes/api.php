@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PcAuthController;
 use App\Http\Controllers\Api\FacebookAccountController;
 use App\Http\Controllers\Api\UpdateFacebookAccountController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\FacebookQuickCheckController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,4 +32,14 @@ Route::get('/pending-facebook-accounts', [FacebookAccountController::class, 'get
 Route::post('/update-facebook-account', [UpdateFacebookAccountController::class, 'update']);
 
 // Order Routes
-Route::get('/orders', [OrderController::class, 'getOrders']); 
+Route::get('/orders', [OrderController::class, 'getOrders']);
+
+/*
+|--------------------------------------------------------------------------
+| Facebook Quick Check API Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('facebook-quick-check')->group(function () {
+    Route::get('/get-account', [FacebookQuickCheckController::class, 'getAccountForChecking']);
+    Route::post('/update-check/{id}', [FacebookQuickCheckController::class, 'updateCheckResult']);
+}); 

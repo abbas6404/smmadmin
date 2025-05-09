@@ -429,6 +429,74 @@
                         </div>
                     </div>
 
+                    <!-- Facebook Quick Check API Section -->
+                    <div class="api-section">
+                        <h5>Facebook Quick Check API</h5>
+                        <p>This API allows chrome extensions to get and update Facebook accounts for validation.</p>
+                        <p>All requests to this API require an API key sent in the header:</p>
+                        <pre><code>X-API-KEY: YOUR_API_KEY</code></pre>
+
+                        <div class="endpoint">
+                            <h6>Get Account for Checking</h6>
+                            <p><strong>GET /api/facebook-quick-check/get-account</strong></p>
+                            <p>Headers:</p>
+                            <pre><code>X-API-KEY: OnAepmaj9ktXD3LB79Rjv0EMZTXhKpHtdWm5byKibx7lIo4p8pjyK2hZAeItweg8</code></pre>
+                            <p>Response (Success):</p>
+                            <pre><code>{
+    "id": 123,
+    "email": "user@example.com",
+    "password": "password123",
+    "two_factor_secret": "K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS"
+}</code></pre>
+                            <p>The endpoint automatically updates the account status to 'processing' when retrieved.</p>
+                            <p>Possible Error Responses:</p>
+                            <ul>
+                                <li><strong>401 Unauthorized</strong> - Invalid API key</li>
+                                <li><strong>404 Not Found</strong> - No accounts available for checking</li>
+                            </ul>
+                        </div>
+
+                        <div class="endpoint">
+                            <h6>Update Check Result</h6>
+                            <p><strong>POST /api/facebook-quick-check/update-check/{id}</strong></p>
+                            <p>Headers:</p>
+                            <pre><code>X-API-KEY: OnAepmaj9ktXD3LB79Rjv0EMZTXhKpHtdWm5byKibx7lIo4p8pjyK2hZAeItweg8
+Content-Type: application/json</code></pre>
+                            <p>URL Parameters:</p>
+                            <ul>
+                                <li><strong>id</strong> - ID of the account to update</li>
+                            </ul>
+                            <p>Request Body:</p>
+                            <pre><code>{
+    "status": "active",
+    "check_result": "Account verified successfully",
+    "account_cookies": {
+        "c_user": "12345",
+        "xs": "abcdef12345",
+        "datr": "xyz123"
+    },
+    "notes": "This account is working well. Last login was successful."
+}</code></pre>
+                            <p>Field Descriptions:</p>
+                            <ul>
+                                <li><strong>status</strong> (required) - Either "active" or "blocked"</li>
+                                <li><strong>check_result</strong> (optional) - Result of the check</li>
+                                <li><strong>account_cookies</strong> (optional) - Object containing account cookies</li>
+                                <li><strong>notes</strong> (optional) - Additional notes about the account</li>
+                            </ul>
+                            <p>Response (Success):</p>
+                            <pre><code>{
+    "message": "Account updated successfully"
+}</code></pre>
+                            <p>Possible Error Responses:</p>
+                            <ul>
+                                <li><strong>401 Unauthorized</strong> - Invalid API key</li>
+                                <li><strong>404 Not Found</strong> - Account not found</li>
+                                <li><strong>422 Validation Error</strong> - Invalid input data</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <div class="api-section">
                         <h5>Error Responses</h5>
                         <p>Error responses follow this format:</p>

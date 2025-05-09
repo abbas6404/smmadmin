@@ -91,6 +91,11 @@
             <span>Facebook Accounts</span>
         </a>
 
+        <a href="{{ route('admin.facebook-quick-check.index') }}" class="sidebar-link {{ request()->routeIs('admin.facebook-quick-check.*') ? 'active' : '' }}" data-title="Facebook Quick Check">
+            <i class="fab fa-facebook-f"></i>
+            <span>Facebook Quick Check</span>
+        </a>
+
         <a href="{{ route('admin.gmail.index') }}" class="sidebar-link {{ request()->routeIs('admin.gmail.*') ? 'active' : '' }}" data-title="Gmail">
             <i class="fas fa-envelope"></i>
             <span>Gmail Accounts</span>

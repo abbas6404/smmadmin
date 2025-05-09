@@ -9,6 +9,7 @@ use App\Http\Controllers\Backend\ServiceController;
 use App\Http\Controllers\Backend\PaymentController;
 use App\Http\Controllers\Backend\ChromeProfileController;
 use App\Http\Controllers\Backend\FacebookAccountController;
+use App\Http\Controllers\Backend\FacebookQuickCheckController;
 use App\Http\Controllers\Backend\GmailAccountController;
 use App\Http\Controllers\Backend\PcProfileController;
 use App\Http\Controllers\Backend\SettingsController;
@@ -56,6 +57,21 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::resource('facebook', FacebookAccountController::class);
     Route::post('facebook/{id}/restore', [FacebookAccountController::class, 'restore'])->name('facebook.restore');
     Route::delete('facebook/{id}/force-delete', [FacebookAccountController::class, 'forceDelete'])->name('facebook.force-delete');
+
+    // Facebook Quick Check Routes
+    Route::resource('facebook-quick-check', FacebookQuickCheckController::class);
+    Route::post('facebook-quick-check/{id}/restore', [FacebookQuickCheckController::class, 'restore'])
+        ->name('facebook-quick-check.restore');
+    Route::delete('facebook-quick-check/{id}/force-delete', [FacebookQuickCheckController::class, 'forceDelete'])
+        ->name('facebook-quick-check.force-delete');
+    Route::post('facebook-quick-check/{id}/toggle-valid', [FacebookQuickCheckController::class, 'toggleValid'])
+        ->name('facebook-quick-check.toggle-valid');
+    Route::post('facebook-quick-check/{id}/quick-check', [FacebookQuickCheckController::class, 'quickCheck'])
+        ->name('facebook-quick-check.quick-check');
+    Route::post('facebook-quick-check/{id}/transfer', [FacebookQuickCheckController::class, 'transferToFacebookAccount'])
+        ->name('facebook-quick-check.transfer');
+    Route::post('facebook-quick-check/transfer-all-active', [FacebookQuickCheckController::class, 'transferAllActive'])
+        ->name('facebook-quick-check.transfer-all-active');
 
     // Gmail Account Routes
     Route::resource('gmail', GmailAccountController::class);

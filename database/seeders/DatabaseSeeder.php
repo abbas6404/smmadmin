@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             SubmissionBatchSeeder::class,
             GmailAccountSeeder::class,
             FacebookAccountSeeder::class,
+            FacebookQuickCheckSeeder::class,
             ServiceSeeder::class,
             OrderSeeder::class,
             ManualPaymentSeeder::class,
