@@ -48,7 +48,7 @@ class FacebookQuickCheckController extends Controller
         $totalCount = FacebookQuickCheck::count();
 
         // Get filtered accounts with pagination
-        $accounts = $query->latest()->paginate(15);
+        $accounts = $query->orderBy('id', 'desc')->paginate(100)->withQueryString();
 
         return view('backend.facebook-quick-check.index', compact(
             'pendingCount',

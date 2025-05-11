@@ -5,6 +5,66 @@
 @push('styles')
 <!-- SweetAlert2 -->
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+    .pagination {
+        margin: 0;
+        display: flex;
+        padding-left: 0;
+        list-style: none;
+        border-radius: 0.35rem;
+    }
+
+    .page-link {
+        position: relative;
+        display: block;
+        padding: 0.5rem 0.75rem;
+        margin-left: -1px;
+        line-height: 1.25;
+        color: #4e73df;
+        background-color: #fff;
+        border: 1px solid #dddfeb;
+    }
+
+    .page-item:first-child .page-link {
+        margin-left: 0;
+        border-top-left-radius: 0.35rem;
+        border-bottom-left-radius: 0.35rem;
+    }
+
+    .page-item:last-child .page-link {
+        border-top-right-radius: 0.35rem;
+        border-bottom-right-radius: 0.35rem;
+    }
+
+    .page-item.active .page-link {
+        z-index: 3;
+        color: #fff;
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+
+    .page-item.disabled .page-link {
+        color: #858796;
+        pointer-events: none;
+        cursor: auto;
+        background-color: #fff;
+        border-color: #dddfeb;
+    }
+
+    .page-link:hover {
+        z-index: 2;
+        color: #224abe;
+        text-decoration: none;
+        background-color: #eaecf4;
+        border-color: #dddfeb;
+    }
+
+    .page-link:focus {
+        z-index: 3;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+</style>
 @endpush
 
 @section('content')
@@ -335,8 +395,52 @@
                 </table>
             </div>
             
-            <div class="d-flex justify-content-center mt-4">
-                {{ $accounts->withQueryString()->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Showing {{ $accounts->firstItem() ?? 0 }} to {{ $accounts->lastItem() ?? 0 }} of {{ $accounts->total() }} results
+                </div>
+                <div>
+                    @if ($accounts->hasPages())
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {{-- Previous Page Link --}}
+                                @if ($accounts->onFirstPage())
+                                    <li class="page-item disabled">
+                                        <span class="page-link" aria-hidden="true">&laquo; Previous</span>
+                                    </li>
+                                @else
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $accounts->previousPageUrl() }}" rel="prev">&laquo; Previous</a>
+                                    </li>
+                                @endif
+
+                                {{-- Pagination Elements --}}
+                                @foreach ($accounts->getUrlRange(1, $accounts->lastPage()) as $page => $url)
+                                    @if ($page == $accounts->currentPage())
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ $page }}</span>
+                                        </li>
+                                    @else
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                        </li>
+                                    @endif
+                                @endforeach
+
+                                {{-- Next Page Link --}}
+                                @if ($accounts->hasMorePages())
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $accounts->nextPageUrl() }}" rel="next">Next &raquo;</a>
+                                    </li>
+                                @else
+                                    <li class="page-item disabled">
+                                        <span class="page-link" aria-hidden="true">Next &raquo;</span>
+                                    </li>
+                                @endif
+                            </ul>
+                        </nav>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

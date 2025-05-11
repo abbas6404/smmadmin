@@ -9,6 +9,10 @@ use App\Http\Controllers\Frontend\ServiceController;
 use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\ProfileController;
 use App\Http\Controllers\Frontend\FundsController;
+use App\Http\Controllers\Frontend\DownloadController;
+
+// Public Download Page
+Route::get('/download', [DownloadController::class, 'index'])->name('downloads');
 
 // Guest Routes
 Route::middleware('guest')->group(function () {
