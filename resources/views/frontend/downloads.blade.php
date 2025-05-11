@@ -482,7 +482,7 @@
                         <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
                         <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
                     </div>
-                    <p>Email: info@smmadmin.com</p>
+                    <p>Email: developer@aioinnovation.com</p>
                 </div>
             </div>
             <hr class="mt-4 mb-4 opacity-25">
