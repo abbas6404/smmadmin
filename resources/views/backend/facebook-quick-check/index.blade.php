@@ -116,17 +116,57 @@
         <h1 class="h3 mb-0 text-gray-800">Facebook Quick ID Check</h1>
         <div class="d-flex">
             @if($activeCount > 0)
-            <form action="{{ route('admin.facebook-quick-check.transfer-all-active') }}" method="POST" class="me-2">
-                @csrf
-                <button type="submit" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" 
-                   onclick="return confirm('Are you sure you want to transfer all {{ $activeCount }} active accounts to Facebook accounts?')">
-                    <i class="fas fa-exchange-alt fa-sm text-white-50"></i> Transfer All Active ({{ $activeCount }})
-                </button>
-            </form>
+            <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#transferAllModal">
+                <i class="fas fa-exchange-alt fa-sm text-white-50"></i> Transfer All Active ({{ $activeCount }})
+            </button>
             @endif
             <a href="{{ route('admin.facebook-quick-check.create') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
                 <i class="fas fa-plus fa-sm text-white-50"></i> Add New Account
             </a>
+        </div>
+    </div>
+
+    <!-- Transfer All Modal -->
+    <div class="modal fade" id="transferAllModal" tabindex="-1" aria-labelledby="transferAllModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="transferAllModalLabel">Transfer Active Accounts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('admin.facebook-quick-check.transfer-all-active') }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="pc_profile_id" class="form-label required">Select PC</label>
+                            <select class="form-select" id="pc_profile_id" name="pc_profile_id" required>
+                                <option value="">-- Select PC --</option>
+                                @foreach($pcProfiles ?? [] as $pc)
+                                <option value="{{ $pc->id }}">{{ $pc->pc_name }} ({{ $pc->email }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="account_count" class="form-label required">Number of Accounts to Transfer</label>
+                            <input type="number" class="form-control" id="account_count" name="account_count" 
+                                   min="1" max="{{ $activeCount }}" value="{{ min(10, $activeCount) }}" required>
+                            <div class="form-text">Maximum available: {{ $activeCount }} accounts</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Selected accounts will be transferred to the chosen PC and marked as "in_use". New accounts will be created with "pending" status in the Facebook accounts system.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-exchange-alt me-1"></i> Transfer Accounts
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

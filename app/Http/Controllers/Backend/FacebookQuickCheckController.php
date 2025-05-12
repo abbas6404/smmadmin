@@ -49,6 +49,9 @@ class FacebookQuickCheckController extends Controller
 
         // Get filtered accounts with pagination
         $accounts = $query->orderBy('id', 'desc')->paginate(100)->withQueryString();
+        
+        // Get PcProfiles for the transfer modal
+        $pcProfiles = \App\Models\PcProfile::where('status', 'active')->get();
 
         return view('backend.facebook-quick-check.index', compact(
             'pendingCount',
@@ -58,7 +61,8 @@ class FacebookQuickCheckController extends Controller
             'blockedCount',
             'deletedCount',
             'totalCount',
-            'accounts'
+            'accounts',
+            'pcProfiles'
         ));
     }
 
@@ -171,7 +175,8 @@ class FacebookQuickCheckController extends Controller
     public function show(string $id)
     {
         $account = FacebookQuickCheck::withTrashed()->findOrFail($id);
-        return view('backend.facebook-quick-check.show', compact('account'));
+        $pcProfiles = \App\Models\PcProfile::where('status', 'active')->get();
+        return view('backend.facebook-quick-check.show', compact('account', 'pcProfiles'));
     }
 
     /**
@@ -352,13 +357,22 @@ class FacebookQuickCheckController extends Controller
     /**
      * Transfer account to main Facebook accounts
      */
-    public function transferToFacebookAccount(string $id)
+    public function transferToFacebookAccount(Request $request, string $id)
     {
+        $request->validate([
+            'pc_profile_id' => 'required|exists:pc_profiles,id'
+        ]);
+        
+        $pcProfileId = $request->pc_profile_id;
+        
         try {
             DB::beginTransaction();
             
             // Find the quick check account
             $quickCheckAccount = FacebookQuickCheck::findOrFail($id);
+            
+            // Get PC profile
+            $pcProfile = \App\Models\PcProfile::findOrFail($pcProfileId);
             
             // Only allow active accounts to be transferred
             if ($quickCheckAccount->status !== 'active') {
@@ -377,8 +391,9 @@ class FacebookQuickCheckController extends Controller
                 'email' => $quickCheckAccount->email,
                 'password' => $quickCheckAccount->password,
                 'two_factor_secret' => $quickCheckAccount->two_factor_secret,
-                'status' => 'active', // Set as active since it was validated
-                'note' => "Transferred from Quick Check. Notes: {$quickCheckAccount->notes}",
+                'status' => 'pending', // Set as pending instead of active
+                'note' => "Transferred from Quick Check. PC: {$pcProfile->pc_name}. Notes: {$quickCheckAccount->notes}",
+                'pc_profile_id' => $pcProfileId
             ];
             
             // Also transfer cookies if they exist
@@ -390,13 +405,13 @@ class FacebookQuickCheckController extends Controller
             
             // Update the quick check account to show it's been transferred
             $quickCheckAccount->status = 'in_use';
-            $quickCheckAccount->check_result = 'Transferred to Facebook accounts';
+            $quickCheckAccount->check_result = "Transferred to PC: {$pcProfile->pc_name}";
             $quickCheckAccount->save();
             
             DB::commit();
             
             return redirect()->back()
-                ->with('success', "Account successfully transferred to Facebook accounts with ID #{$facebookAccount->id}");
+                ->with('success', "Account successfully transferred to PC: {$pcProfile->pc_name} with ID #{$facebookAccount->id} (status: pending)");
                 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -408,13 +423,26 @@ class FacebookQuickCheckController extends Controller
     /**
      * Transfer all active accounts to Facebook accounts
      */
-    public function transferAllActive()
+    public function transferAllActive(Request $request)
     {
+        $request->validate([
+            'pc_profile_id' => 'required|exists:pc_profiles,id',
+            'account_count' => 'required|integer|min:1'
+        ]);
+        
+        $pcProfileId = $request->pc_profile_id;
+        $accountCount = $request->account_count;
+        
         try {
             DB::beginTransaction();
             
-            // Get all active quick check accounts
-            $activeAccounts = FacebookQuickCheck::where('status', 'active')->get();
+            // Get PC profile
+            $pcProfile = \App\Models\PcProfile::findOrFail($pcProfileId);
+            
+            // Get limited number of active accounts
+            $activeAccounts = FacebookQuickCheck::where('status', 'active')
+                ->take($accountCount)
+                ->get();
             
             if ($activeAccounts->isEmpty()) {
                 return redirect()->back()
@@ -436,8 +464,9 @@ class FacebookQuickCheckController extends Controller
                     'email' => $quickCheckAccount->email,
                     'password' => $quickCheckAccount->password,
                     'two_factor_secret' => $quickCheckAccount->two_factor_secret,
-                    'status' => 'active', // Set as active since it was validated
-                    'note' => "Transferred from Quick Check. Notes: {$quickCheckAccount->notes}",
+                    'status' => 'pending', // Set as pending instead of active
+                    'note' => "Transferred from Quick Check. PC: {$pcProfile->pc_name}. Notes: {$quickCheckAccount->notes}",
+                    'pc_profile_id' => $pcProfileId
                 ];
                 
                 // Also transfer cookies if they exist
@@ -449,7 +478,7 @@ class FacebookQuickCheckController extends Controller
                 
                 // Update the quick check account to show it's been transferred
                 $quickCheckAccount->status = 'in_use';
-                $quickCheckAccount->check_result = 'Transferred to Facebook accounts';
+                $quickCheckAccount->check_result = "Transferred to PC: {$pcProfile->pc_name}";
                 $quickCheckAccount->save();
                 
                 $transferred++;
@@ -461,11 +490,11 @@ class FacebookQuickCheckController extends Controller
                 if (!empty($errors)) {
                     return redirect()->back()
                         ->with('warning', implode("\n", $errors))
-                        ->with('success', "{$transferred} accounts successfully transferred to Facebook accounts.");
+                        ->with('success', "{$transferred} accounts successfully transferred to PC: {$pcProfile->pc_name} with pending status.");
                 }
                 
                 return redirect()->back()
-                    ->with('success', "All {$transferred} active accounts successfully transferred to Facebook accounts.");
+                    ->with('success', "{$transferred} accounts successfully transferred to PC: {$pcProfile->pc_name} with pending status.");
             } else {
                 return redirect()->back()
                     ->with('error', "Failed to transfer any accounts.\n" . implode("\n", $errors));

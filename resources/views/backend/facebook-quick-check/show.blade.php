@@ -42,12 +42,9 @@
                                     </button>
                                 </form>
                                 @if($account->status == 'active')
-                                <form action="{{ route('admin.facebook-quick-check.transfer', $account->id) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item" onclick="return confirm('Are you sure you want to transfer this account to Facebook accounts?')">
-                                        <i class="fas fa-exchange-alt fa-sm fa-fw mr-2 text-gray-400"></i> Transfer to FB Account
-                                    </button>
-                                </form>
+                                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#transferModal">
+                                    <i class="fas fa-exchange-alt fa-sm fa-fw mr-2 text-gray-400"></i> Transfer to FB Account
+                                </button>
                                 @endif
                                 <div class="dropdown-divider"></div>
                                 <form action="{{ route('admin.facebook-quick-check.destroy', $account->id) }}" method="POST" class="d-inline">
@@ -259,3 +256,40 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush 
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transferModalLabel">Transfer Account to Facebook</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.facebook-quick-check.transfer', $account->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="pc_profile_id" class="form-label required">Select PC</label>
+                        <select class="form-select" id="pc_profile_id" name="pc_profile_id" required>
+                            <option value="">-- Select PC --</option>
+                            @foreach($pcProfiles ?? [] as $pc)
+                            <option value="{{ $pc->id }}">{{ $pc->pc_name }} ({{ $pc->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This account will be transferred to the selected PC and marked as "in_use". A new account will be created with "pending" status in the Facebook accounts system.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-exchange-alt me-1"></i> Transfer Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> 
