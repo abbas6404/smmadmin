@@ -51,18 +51,18 @@
                 <div class="row">
                     <!-- Email and Password Input -->
                     <div class="col-md-12 mb-3">
-                        <label for="accounts" class="form-label required">Email|Password|2FA Combinations</label>
+                        <label for="accounts" class="form-label required">Email/Phone Number|Password|2FA Combinations</label>
                         <textarea name="accounts" id="accounts" class="form-control {{ $errors->has('accounts') ? 'is-invalid' : '' }}" 
-                                rows="15" required placeholder="Enter one email|password|2fa combination per line, example:&#10;user1@gmail.com|password1|2FA_SECRET&#10;user2@gmail.com|password2|2FA_SECRET">{{ old('accounts') }}</textarea>
+                                rows="15" required placeholder="Enter one account per line, example:&#10;user1@gmail.com|password1|2FA_SECRET&#10;1234567890|password2|2FA_SECRET">{{ old('accounts') }}</textarea>
                         @if($errors->has('accounts'))
                             <div class="invalid-feedback">{{ $errors->first('accounts') }}</div>
                         @endif
                         <div class="form-text">
-                            Enter each account on a new line in the format: email|password|2fa<br>
+                            Enter each account on a new line in the format: email/phone|password|2fa<br>
                             The 2FA code is optional.<br>
                             Examples:<br>
                             user1@gmail.com|password123|K35A YRDA ADHP FIWT XCBU SRJS O54L LCTS<br>
-                            user2@gmail.com|password456
+                            1234567890|password456
                         </div>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                         <strong>Important:</strong>
                     </div>
                     <ul class="mb-0 mt-2">
-                        <li>Duplicate emails will be automatically skipped</li>
+                        <li>Duplicate emails or phone numbers will be automatically skipped</li>
                         <li>A report will be shown with successful and failed accounts</li>
                         <li>You can check existing accounts in the <a href="{{ route('admin.facebook-quick-check.index') }}">accounts list</a></li>
                     </ul>

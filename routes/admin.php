@@ -57,6 +57,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::resource('facebook', FacebookAccountController::class);
     Route::post('facebook/{id}/restore', [FacebookAccountController::class, 'restore'])->name('facebook.restore');
     Route::delete('facebook/{id}/force-delete', [FacebookAccountController::class, 'forceDelete'])->name('facebook.force-delete');
+    Route::match(['post', 'delete'], 'facebook-bulk-update', [FacebookAccountController::class, 'bulkUpdate'])->name('facebook-bulk-update');
 
     // Facebook Quick Check Routes
     Route::resource('facebook-quick-check', FacebookQuickCheckController::class);
@@ -72,6 +73,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
         ->name('facebook-quick-check.transfer');
     Route::post('facebook-quick-check/transfer-all-active', [FacebookQuickCheckController::class, 'transferAllActive'])
         ->name('facebook-quick-check.transfer-all-active');
+    Route::match(['post', 'delete'], 'facebook-quick-check-bulk-update', [FacebookQuickCheckController::class, 'bulkUpdate'])
+        ->name('facebook-quick-check-bulk-update');
 
     // Gmail Account Routes
     Route::resource('gmail', GmailAccountController::class);

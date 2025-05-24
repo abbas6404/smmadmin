@@ -48,7 +48,7 @@ class FacebookQuickCheckController extends Controller
         $totalCount = FacebookQuickCheck::count();
 
         // Get filtered accounts with pagination
-        $accounts = $query->orderBy('id', 'desc')->paginate(100)->withQueryString();
+        $accounts = $query->orderBy('id', 'desc')->paginate(1000)->withQueryString();
         
         // Get PcProfiles for the transfer modal
         $pcProfiles = \App\Models\PcProfile::where('status', 'active')->get();
@@ -96,7 +96,7 @@ class FacebookQuickCheckController extends Controller
             // Split the line into email and password
             $parts = explode('|', $line);
             if (count($parts) < 2 || count($parts) > 3) {
-                $errors[] = "Invalid format for line: {$line}. Expected format: email|password[|2fa]";
+                $errors[] = "Invalid format for line: {$line}. Expected format: email/phone|password[|2fa]";
                 continue;
             }
 
@@ -131,7 +131,7 @@ class FacebookQuickCheckController extends Controller
 
         // Add duplicates to errors array with specific message
         if (!empty($duplicates)) {
-            $errors[] = "The following emails already exist: " . implode(", ", $duplicates);
+            $errors[] = "The following emails/phone numbers already exist: " . implode(", ", $duplicates);
         }
 
         if ($created > 0) {
@@ -198,8 +198,8 @@ class FacebookQuickCheckController extends Controller
         $validated = $request->validate([
             'email' => [
                 'required',
-                'email',
                 'max:255',
+                'regex:/^([a-z0-9\+_\-]+)(\.[a-z0-9\+_\-]+)*@([a-z0-9\-]+\.)+[a-z]{2,6}$|^\d+$/',
                 Rule::unique('facebook_quick_check')->ignore($account->id)
             ],
             'password' => 'nullable|string|min:6',
@@ -504,6 +504,51 @@ class FacebookQuickCheckController extends Controller
             DB::rollBack();
             return redirect()->back()
                 ->with('error', 'Failed to transfer accounts: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Bulk update the status of multiple Facebook Quick Check accounts.
+     */
+    public function bulkUpdate(Request $request)
+    {
+        // Check if account_ids is present in the request
+        if (!$request->has('account_ids') || empty($request->account_ids)) {
+            return redirect()->back()->with('error', 'No accounts selected for update.');
+        }
+        
+        $validated = $request->validate([
+            'account_ids' => 'required|array',
+            'account_ids.*' => 'exists:facebook_quick_check,id',
+            'status' => ['required', Rule::in(['pending', 'processing', 'active', 'in_use', 'blocked'])]
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            $count = 0;
+            
+            // If status is 'blocked', soft delete the accounts
+            if ($validated['status'] === 'blocked') {
+                foreach ($validated['account_ids'] as $id) {
+                    $account = FacebookQuickCheck::findOrFail($id);
+                    $account->status = 'blocked';
+                    $account->save();
+                    $account->delete();
+                    $count++;
+                }
+            } else {
+                // Otherwise just update the status
+                $count = FacebookQuickCheck::whereIn('id', $validated['account_ids'])
+                    ->update(['status' => $validated['status']]);
+            }
+            
+            DB::commit();
+            
+            return redirect()->back()->with('success', "{$count} Facebook accounts updated to status '{$validated['status']}' successfully.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to update accounts: ' . $e->getMessage());
         }
     }
 }

@@ -55,7 +55,7 @@ class GmailAccountController extends Controller // Rename class
         $inactiveCount = GmailAccount::where('status', 'inactive')->count();
 
         // Get filtered accounts with pagination
-        $accounts = $query->latest()->paginate(15);
+        $accounts = $query->latest()->paginate(100);
 
         return view('backend.gmail.index', compact(
             'totalCount',
@@ -106,7 +106,7 @@ class GmailAccountController extends Controller // Rename class
             
             if ($request->batch_type === 'new') {
                 $batch = new SubmissionBatch();
-                $batch->user_id = auth()->id();
+                $batch->user_id = auth()->guard('admin')->user()->id;
                 $batch->name = $request->new_batch_name;
                 $batch->submission_type = 'facebook_and_gmail'; // Use combined type
                 $batch->save();

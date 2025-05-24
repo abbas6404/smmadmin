@@ -45,7 +45,7 @@ class PcProfileController extends Controller
         $blockedCount = PcProfile::where('status', 'blocked')->count();
         $deletedCount = PcProfile::onlyTrashed()->count(); // Count soft-deleted
 
-        $profiles = $query->orderBy('created_at', 'desc')->paginate(15);
+        $profiles = $query->orderBy('created_at', 'desc')->paginate(100);
 
         return view('backend.pc_profile.index', compact(
             'profiles',

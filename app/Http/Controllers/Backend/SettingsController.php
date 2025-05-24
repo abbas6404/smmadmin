@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class SettingsController extends Controller
 {
@@ -29,7 +30,7 @@ class SettingsController extends Controller
             $validated['avatar'] = $avatarPath;
         }
 
-        $admin->update($validated);
+        DB::table('admins')->where('id', $admin->id)->update($validated);
 
         return back()->with('success', 'Profile updated successfully');
     }
@@ -52,7 +53,7 @@ class SettingsController extends Controller
             return back()->withErrors(['current_password' => 'The provided password does not match your current password.']);
         }
 
-        $admin->update([
+        DB::table('admins')->where('id', $admin->id)->update([
             'password' => Hash::make($request->password)
         ]);
 

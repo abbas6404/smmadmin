@@ -51,7 +51,7 @@ class ChromeProfileController extends Controller
         // removedCount specifically counts soft-deleted items
         $removedCount = ChromeProfile::onlyTrashed()->count(); 
 
-        $profiles = $query->orderBy('created_at', 'desc')->paginate(15);
+        $profiles = $query->orderBy('created_at', 'desc')->paginate(100);
 
         return view('backend.chrome.index', compact(
             'profiles', 

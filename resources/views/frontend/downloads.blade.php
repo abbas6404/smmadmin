@@ -363,6 +363,7 @@
                             <span class="badge bg-light text-primary me-2 mb-2 p-2">Easy Setup</span>
                             <span class="badge bg-light text-primary me-2 mb-2 p-2">Regular Updates</span>
                             <span class="badge bg-light text-primary me-2 mb-2 p-2">Free Support</span>
+                            <span class="badge bg-light text-primary me-2 mb-2 p-2"><i class="fab fa-github me-1"></i> <a href="https://github.com/abbas6404/smm_auto_login_extensions_with_central_server" target="_blank" style="text-decoration: none; color: inherit;">Open Source</a></span>
                         </div>
                     </div>
                     <div class="card-footer text-center">
@@ -391,8 +392,11 @@
                                 <a href="mailto:support@example.com" class="btn btn-outline-primary me-3 mb-2">
                                     <i class="fas fa-envelope me-2"></i> Contact Support
                                 </a>
-                                <a href="#" class="btn btn-outline-primary mb-2">
+                                <a href="#" class="btn btn-outline-primary me-3 mb-2">
                                     <i class="fas fa-book me-2"></i> View Documentation
+                                </a>
+                                <a href="https://github.com/abbas6404/smm_auto_login_extensions_with_central_server" class="btn btn-outline-primary mb-2" target="_blank">
+                                    <i class="fab fa-github me-2"></i> GitHub Repository
                                 </a>
                             </div>
                         </div>
@@ -481,6 +485,7 @@
                         <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
                         <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
                         <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="https://github.com/abbas6404/smm_auto_login_extensions_with_central_server" class="social-link" target="_blank"><i class="fab fa-github"></i></a>
                     </div>
                     <p>Email: developer@aioinnovation.com</p>
                 </div>

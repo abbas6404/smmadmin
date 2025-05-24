@@ -17,13 +17,14 @@ class DiskController extends Controller
     {
         $disks = Disk::with('pcProfile')
             ->orderBy('free_space', 'asc')
-            ->paginate(10);
+            ->paginate(30);
 
         $stats = [
             'total' => Disk::count(),
             'healthy' => Disk::where('health_percentage', '>=', 90)->count(),
             'warning' => Disk::whereBetween('health_percentage', [70, 89])->count(),
             'min_free_space' => Disk::min('free_space'),
+            'total_free_space' => Disk::sum('free_space'),
         ];
 
         return view('backend.disks.index', compact('disks', 'stats'));

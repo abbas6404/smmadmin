@@ -10,7 +10,7 @@
     <!-- Stats Cards -->
     <div class="row">
         <!-- Total Disks -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -27,13 +27,25 @@
         </div>
 
         <!-- Minimum Free Space -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-6 mb-4">
             <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Minimum Free Space</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $stats['min_free_space'] }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @php
+                                    function formatBytes($bytes) {
+                                        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                                        $bytes = max($bytes, 0);
+                                        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+                                        $pow = min($pow, count($units) - 1);
+                                        $bytes /= pow(1024, $pow);
+                                        return round($bytes, 2) . ' ' . $units[$pow];
+                                    }
+                                @endphp
+                                {{ $stats['min_free_space'] ? formatBytes($stats['min_free_space']) : 'N/A' }}
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-database fa-2x text-gray-300"></i>
@@ -43,8 +55,27 @@
             </div>
         </div>
 
+        <!-- Total Free Space -->
+        <div class="col-xl-2 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Free Space</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ $stats['total_free_space'] ? formatBytes($stats['total_free_space']) : 'N/A' }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-server fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Healthy Disks -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-6 mb-4">
             <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -61,7 +92,7 @@
         </div>
 
         <!-- Warning Disks -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-2 col-md-6 mb-4">
             <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -129,8 +160,52 @@
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-center mt-4">
-                {{ $disks->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Showing {{ $disks->firstItem() ?? 0 }} to {{ $disks->lastItem() ?? 0 }} of {{ $disks->total() }} results
+                </div>
+                <div>
+                    @if ($disks->hasPages())
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {{-- Previous Page Link --}}
+                                @if ($disks->onFirstPage())
+                                    <li class="page-item disabled">
+                                        <span class="page-link" aria-hidden="true">&laquo; Previous</span>
+                                    </li>
+                                @else
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $disks->previousPageUrl() }}" rel="prev">&laquo; Previous</a>
+                                    </li>
+                                @endif
+
+                                {{-- Pagination Elements --}}
+                                @foreach ($disks->getUrlRange(1, $disks->lastPage()) as $page => $url)
+                                    @if ($page == $disks->currentPage())
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ $page }}</span>
+                                        </li>
+                                    @else
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                        </li>
+                                    @endif
+                                @endforeach
+
+                                {{-- Next Page Link --}}
+                                @if ($disks->hasMorePages())
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ $disks->nextPageUrl() }}" rel="next">Next &raquo;</a>
+                                    </li>
+                                @else
+                                    <li class="page-item disabled">
+                                        <span class="page-link" aria-hidden="true">Next &raquo;</span>
+                                    </li>
+                                @endif
+                            </ul>
+                        </nav>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
@@ -146,6 +221,57 @@
     .progress-bar {
         line-height: 20px;
         font-size: 12px;
+    }
+    .pagination {
+        margin: 0;
+        display: flex;
+        padding-left: 0;
+        list-style: none;
+        border-radius: 0.35rem;
+    }
+    .page-link {
+        position: relative;
+        display: block;
+        padding: 0.5rem 0.75rem;
+        margin-left: -1px;
+        line-height: 1.25;
+        color: #4e73df;
+        background-color: #fff;
+        border: 1px solid #dddfeb;
+    }
+    .page-item:first-child .page-link {
+        margin-left: 0;
+        border-top-left-radius: 0.35rem;
+        border-bottom-left-radius: 0.35rem;
+    }
+    .page-item:last-child .page-link {
+        border-top-right-radius: 0.35rem;
+        border-bottom-right-radius: 0.35rem;
+    }
+    .page-item.active .page-link {
+        z-index: 3;
+        color: #fff;
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+    .page-item.disabled .page-link {
+        color: #858796;
+        pointer-events: none;
+        cursor: auto;
+        background-color: #fff;
+        border-color: #dddfeb;
+    }
+    .page-link:hover {
+        z-index: 2;
+        color: #224abe;
+        text-decoration: none;
+        background-color: #eaecf4;
+        border-color: #dddfeb;
+    }
+    .page-link:focus {
+        z-index: 3;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
     }
 </style>
 @endpush 

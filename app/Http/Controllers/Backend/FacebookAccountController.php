@@ -9,6 +9,8 @@ use App\Models\PcProfile;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class FacebookAccountController extends Controller
 {
@@ -68,17 +70,19 @@ class FacebookAccountController extends Controller
         $processingCount = FacebookAccount::where('status', 'processing')->count();
         $activeCount = FacebookAccount::where('status', 'active')->count();
         $inactiveCount = FacebookAccount::where('status', 'inactive')->count();
+        $logoutCount = FacebookAccount::where('status', 'logout')->count();
         $deletedCount = FacebookAccount::onlyTrashed()->count();
         $totalCount = FacebookAccount::count();
 
         // Get filtered accounts with pagination
-        $accounts = $query->latest()->paginate(15);
+        $accounts = $query->latest()->paginate(1000);
 
         return view('backend.facebook.index', compact(
             'pendingCount',
             'processingCount',
             'activeCount',
             'inactiveCount',
+            'logoutCount',
             'deletedCount',
             'totalCount',
             'accounts',
@@ -129,7 +133,7 @@ class FacebookAccountController extends Controller
                 Rule::unique('facebook_accounts')->ignore($facebook->id)
             ],
             'password' => 'nullable|string|min:8',
-            'status' => ['required', Rule::in(['pending', 'processing', 'active', 'inactive', 'remove'])],
+            'status' => ['required', Rule::in(['pending', 'processing', 'active', 'inactive', 'logout', 'remove'])],
             'have_use' => 'boolean',
             'have_page' => 'boolean',
             'have_post' => 'boolean',
@@ -229,6 +233,58 @@ class FacebookAccountController extends Controller
     }
 
     /**
+     * Bulk update the status of multiple Facebook accounts.
+     */
+    public function bulkUpdate(Request $request)
+    {
+        // Debugging - log the request data
+        Log::info('Bulk update request data:', $request->all());
+        
+        // Check if account_ids is present in the request
+        if (!$request->has('account_ids') || empty($request->account_ids)) {
+            return redirect()->back()->with('error', 'No accounts selected for update.');
+        }
+        
+        $validated = $request->validate([
+            'account_ids' => 'required|array',
+            'account_ids.*' => 'exists:facebook_accounts,id',
+            'status' => ['required', Rule::in(['active', 'inactive', 'pending', 'processing', 'logout', 'remove'])]
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            $count = 0;
+            
+            // If status is 'remove', soft delete the accounts
+            if ($validated['status'] === 'remove') {
+                foreach ($validated['account_ids'] as $id) {
+                    $account = FacebookAccount::findOrFail($id);
+                    $account->status = 'remove';
+                    $account->save();
+                    $account->delete();
+                    $count++;
+                }
+            } else {
+                // Otherwise just update the status
+                $count = FacebookAccount::whereIn('id', $validated['account_ids'])
+                    ->update(['status' => $validated['status']]);
+            }
+            
+            DB::commit();
+            
+            return redirect()->back()->with('success', "{$count} Facebook accounts updated to status '{$validated['status']}' successfully.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk update error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'request_data' => $request->all()
+            ]);
+            return redirect()->back()->with('error', 'Failed to update accounts: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()
@@ -262,7 +318,7 @@ class FacebookAccountController extends Controller
         $submissionBatchId = null;
         if ($validated['batch_type'] === 'new') {
             $submissionBatch = DB::table('submission_batch')->insertGetId([
-                'user_id' => auth()->id(),
+                'user_id' => auth()->guard('admin')->user()->id,
                 'name' => $validated['new_batch_name'],
                 'submission_type' => 'facebook',
                 'total_submissions' => 0,

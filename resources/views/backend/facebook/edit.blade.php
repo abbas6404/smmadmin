@@ -78,6 +78,7 @@
                             <option value="processing" {{ old('status', $facebook->status) == 'processing' ? 'selected' : '' }}>Processing</option>
                             <option value="active" {{ old('status', $facebook->status) == 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ old('status', $facebook->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                            <option value="logout" {{ old('status', $facebook->status) == 'logout' ? 'selected' : '' }}>Logout</option>
                             <option value="remove" {{ old('status', $facebook->status) == 'remove' ? 'selected' : '' }}>Remove</option>
                         </select>
                         @error('status')

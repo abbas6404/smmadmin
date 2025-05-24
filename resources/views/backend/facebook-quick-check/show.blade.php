@@ -88,7 +88,7 @@
                                     <td>{{ $account->id }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Email</th>
+                                    <th>Email/Phone</th>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             {{ $account->email }}

@@ -46,7 +46,7 @@ class SubmissionBatchController extends Controller
         $trashedCount = SubmissionBatch::onlyTrashed()->count();
 
         // Get paginated results
-        $batches = $query->latest()->paginate(10);
+        $batches = $query->latest()->paginate(100);
 
         return view('backend.submission-batch.index', compact(
             'batches',

@@ -5,6 +5,8 @@
 @push('styles')
 <!-- SweetAlert2 -->
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<!-- CSRF Token -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
     .pagination {
         margin: 0;
@@ -63,6 +65,60 @@
         z-index: 3;
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .bulk-actions-fab {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 999;
+    }
+    
+    .bulk-actions-fab .btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .bulk-actions-fab .btn i {
+        font-size: 24px;
+    }
+    
+    .bulk-actions-counter {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background-color: #e74a3b;
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .bulk-actions-panel {
+        display: none;
+        position: fixed;
+        bottom: 100px;
+        right: 30px;
+        width: 300px;
+        z-index: 998;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        padding: 15px;
+    }
+    
+    .highlight-row {
+        background-color: rgba(78, 115, 223, 0.1) !important;
     }
 </style>
 @endpush
@@ -328,10 +384,44 @@
             </div>
         </div>
         <div class="card-body">
+            <!-- Bulk Actions -->
+            <form id="bulk-action-form" action="{{ route('admin.facebook-quick-check-bulk-update') }}" method="POST" class="mb-4">
+                @csrf
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label font-weight-bold">Bulk Status Update</label>
+                        <select class="form-control" name="status" required>
+                            <option value="">Select Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="active">Active</option>
+                            <option value="in_use">In Use</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button type="submit" class="btn btn-primary" id="bulk-update-btn" disabled>
+                            <i class="fas fa-save"></i> Update Selected Accounts
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3 text-end">
+                        <div class="form-check d-inline-block">
+                            <input class="form-check-input" type="checkbox" id="select-all">
+                            <label class="form-check-label" for="select-all">
+                                Select All
+                            </label>
+                        </div>
+                        <span class="ms-2" id="selected-count">(0 selected)</span>
+                    </div>
+                </div>
+
             <div class="table-responsive">
                 <table class="table table-bordered" width="100%" cellspacing="0">
                     <thead>
                         <tr>
+                            <th width="40px">
+                                <div class="text-center">#</div>
+                            </th>
                             <th>ID</th>
                             <th>Email</th>
                             <th>Status</th>
@@ -343,7 +433,14 @@
                     </thead>
                     <tbody>
                         @forelse($accounts as $account)
-                        <tr>
+                        <tr class="{{ $account->trashed() ? 'table-danger' : '' }}">
+                            <td class="text-center">
+                                @if(!$account->trashed())
+                                <div class="form-check">
+                                    <input class="form-check-input account-checkbox" type="checkbox" name="account_ids[]" value="{{ $account->id }}" id="account-{{ $account->id }}">
+                                </div>
+                                @endif
+                            </td>
                             <td>{{ $account->id }}</td>
                             <td>{{ $account->email }}</td>
                             <td>
@@ -434,6 +531,7 @@
                     </tbody>
                 </table>
             </div>
+            </form>
             
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <div class="text-muted">
@@ -488,12 +586,347 @@
 @endsection
 
 @push('scripts')
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap popovers
     var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
     var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl)
+    });
+    
+    // Bulk selection functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    const bulkUpdateBtn = document.getElementById('bulk-update-btn');
+    const selectedCountDisplay = document.getElementById('selected-count');
+    const bulkActionForm = document.getElementById('bulk-action-form');
+    
+    // Select all checkbox functionality
+    selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+            const row = checkbox.closest('tr');
+            if (row) {
+                if (isChecked) {
+                    row.classList.add('highlight-row');
+                } else {
+                    row.classList.remove('highlight-row');
+                }
+            }
+        });
+        
+        updateSelectedCount();
+    });
+    
+    // Individual checkbox functionality
+    accountCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            
+            // Highlight the row when selected
+            const row = this.closest('tr');
+            if (row) {
+                if (this.checked) {
+                    row.classList.add('highlight-row');
+                } else {
+                    row.classList.remove('highlight-row');
+                }
+            }
+            
+            // Update select all checkbox state
+            if (!this.checked) {
+                selectAllCheckbox.checked = false;
+            } else {
+                // Check if all checkboxes are checked
+                const allChecked = Array.from(accountCheckboxes).every(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+            }
+        });
+    });
+    
+    // Form submission confirmation
+    bulkActionForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedCount = document.querySelectorAll('.account-checkbox:checked').length;
+        const selectedStatus = this.querySelector('select[name="status"]').value;
+        
+        if (selectedCount === 0) {
+            Swal.fire({
+                title: 'No Accounts Selected',
+                text: 'Please select at least one account to update.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        if (!selectedStatus) {
+            Swal.fire({
+                title: 'No Status Selected',
+                text: 'Please select a status to apply to the selected accounts.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Confirm Status Update',
+            html: `Are you sure you want to update <strong>${selectedCount}</strong> accounts to <strong>${selectedStatus}</strong> status?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Update',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Remove any method override that might have been added
+                const methodField = this.querySelector('input[name="_method"]');
+                if (methodField) {
+                    methodField.remove();
+                }
+                
+                // Force the form to use POST method
+                this.setAttribute('method', 'POST');
+                
+                // Create a new form and submit it manually to bypass any browser extensions
+                const newForm = document.createElement('form');
+                newForm.method = 'POST';
+                newForm.action = this.action;
+                newForm.style.display = 'none';
+                
+                // Add CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                                 this.querySelector('input[name="_token"]')?.value;
+                if (csrfToken) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = csrfToken;
+                    newForm.appendChild(csrfInput);
+                }
+                
+                // Add status
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = selectedStatus;
+                newForm.appendChild(statusInput);
+                
+                // Add selected account IDs
+                document.querySelectorAll('.account-checkbox:checked').forEach(checkbox => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'account_ids[]';
+                    input.value = checkbox.value;
+                    newForm.appendChild(input);
+                });
+                
+                // Append form to body and submit
+                document.body.appendChild(newForm);
+                newForm.submit();
+            }
+        });
+    });
+    
+    // Update selected count and button state
+    function updateSelectedCount() {
+        const selectedCount = document.querySelectorAll('.account-checkbox:checked').length;
+        selectedCountDisplay.textContent = `(${selectedCount} selected)`;
+        fabCounter.textContent = selectedCount;
+        
+        // Show/hide the FAB counter
+        if (selectedCount > 0) {
+            fabCounter.style.display = 'flex';
+            bulkActionsFab.classList.add('btn-primary');
+            bulkActionsFab.classList.remove('btn-secondary');
+        } else {
+            fabCounter.style.display = 'none';
+            bulkActionsFab.classList.remove('btn-primary');
+            bulkActionsFab.classList.add('btn-secondary');
+        }
+        
+        // Enable/disable bulk update button
+        bulkUpdateBtn.disabled = selectedCount === 0;
+    }
+    
+    // Floating Action Button for Bulk Actions
+    const body = document.querySelector('body');
+    
+    // Create FAB
+    const fab = document.createElement('div');
+    fab.className = 'bulk-actions-fab';
+    
+    const bulkActionsFab = document.createElement('button');
+    bulkActionsFab.className = 'btn btn-secondary';
+    bulkActionsFab.innerHTML = '<i class="fas fa-tasks"></i>';
+    bulkActionsFab.title = 'Bulk Actions';
+    
+    const fabCounter = document.createElement('div');
+    fabCounter.className = 'bulk-actions-counter';
+    fabCounter.style.display = 'none';
+    fabCounter.textContent = '0';
+    
+    bulkActionsFab.appendChild(fabCounter);
+    fab.appendChild(bulkActionsFab);
+    
+    // Create Bulk Actions Panel
+    const bulkActionsPanel = document.createElement('div');
+    bulkActionsPanel.className = 'bulk-actions-panel';
+    bulkActionsPanel.innerHTML = `
+        <h6 class="font-weight-bold mb-3">Bulk Actions</h6>
+        <div class="mb-3">
+            <label class="form-label">Change Status</label>
+            <select class="form-select form-control mb-2" id="fab-status">
+                <option value="">Select Status</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="active">Active</option>
+                <option value="in_use">In Use</option>
+                <option value="blocked">Blocked</option>
+            </select>
+            <button class="btn btn-primary btn-sm w-100" id="fab-update-btn" disabled>
+                <i class="fas fa-save me-1"></i> Update Status
+            </button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Quick Selection</label>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary btn-sm" id="select-all-fab">
+                    <i class="fas fa-check-square me-1"></i> Select All
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="deselect-all-fab">
+                    <i class="fas fa-square me-1"></i> Deselect All
+                </button>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Selection Info</label>
+            <div class="alert alert-info py-2 mb-0">
+                <small><span id="fab-selected-count">0</span> accounts selected</small>
+            </div>
+        </div>
+    `;
+    
+    // Add to DOM
+    body.appendChild(fab);
+    body.appendChild(bulkActionsPanel);
+    
+    // Initialize panel elements
+    const fabStatusSelect = document.getElementById('fab-status');
+    const fabUpdateBtn = document.getElementById('fab-update-btn');
+    const fabSelectedCount = document.getElementById('fab-selected-count');
+    const selectAllFabBtn = document.getElementById('select-all-fab');
+    const deselectAllFabBtn = document.getElementById('deselect-all-fab');
+    
+    // Toggle panel visibility
+    bulkActionsFab.addEventListener('click', function() {
+        if (bulkActionsPanel.style.display === 'block') {
+            bulkActionsPanel.style.display = 'none';
+        } else {
+            bulkActionsPanel.style.display = 'block';
+            updateFabSelectedCount();
+        }
+    });
+    
+    // Update FAB selected count
+    function updateFabSelectedCount() {
+        const selectedCount = document.querySelectorAll('.account-checkbox:checked').length;
+        fabSelectedCount.textContent = selectedCount;
+        fabUpdateBtn.disabled = selectedCount === 0 || !fabStatusSelect.value;
+    }
+    
+    // Status select change
+    fabStatusSelect.addEventListener('change', function() {
+        updateFabSelectedCount();
+    });
+    
+    // Select all from FAB
+    selectAllFabBtn.addEventListener('click', function() {
+        selectAllCheckbox.checked = true;
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            const row = checkbox.closest('tr');
+            if (row) row.classList.add('highlight-row');
+        });
+        updateSelectedCount();
+        updateFabSelectedCount();
+    });
+    
+    // Deselect all from FAB
+    deselectAllFabBtn.addEventListener('click', function() {
+        selectAllCheckbox.checked = false;
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const row = checkbox.closest('tr');
+            if (row) row.classList.remove('highlight-row');
+        });
+        updateSelectedCount();
+        updateFabSelectedCount();
+    });
+    
+    // FAB update button
+    fabUpdateBtn.addEventListener('click', function() {
+        const selectedCount = document.querySelectorAll('.account-checkbox:checked').length;
+        const selectedStatus = fabStatusSelect.value;
+        
+        if (selectedCount === 0 || !selectedStatus) return;
+        
+        Swal.fire({
+            title: 'Confirm Status Update',
+            html: `Are you sure you want to update <strong>${selectedCount}</strong> accounts to <strong>${selectedStatus}</strong> status?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Update',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Create a new form and submit
+                const newForm = document.createElement('form');
+                newForm.method = 'POST';
+                newForm.action = "{{ route('admin.facebook-quick-check-bulk-update') }}";
+                newForm.style.display = 'none';
+                
+                // Add CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_token';
+                csrfInput.value = csrfToken;
+                newForm.appendChild(csrfInput);
+                
+                // Add status
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = selectedStatus;
+                newForm.appendChild(statusInput);
+                
+                // Add selected account IDs
+                document.querySelectorAll('.account-checkbox:checked').forEach(checkbox => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'account_ids[]';
+                    input.value = checkbox.value;
+                    newForm.appendChild(input);
+                });
+                
+                // Append form to body and submit
+                document.body.appendChild(newForm);
+                newForm.submit();
+            }
+        });
+    });
+    
+    // Close panel when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!fab.contains(event.target) && !bulkActionsPanel.contains(event.target)) {
+            bulkActionsPanel.style.display = 'none';
+        }
     });
 });
 </script>
