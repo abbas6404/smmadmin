@@ -5,16 +5,19 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::where('user_id', auth()->id())
+        $userId = Auth::id();
+        $query = Order::where('user_id', $userId)
             ->with(['service']);
 
         // Filter by status if provided
@@ -40,11 +43,11 @@ class OrderController extends Controller
         $orders = $query->paginate(20)->withQueryString();
 
         $stats = [
-            'total' => Order::where('user_id', auth()->id())->count(),
-            'pending' => Order::where('user_id', auth()->id())->where('status', 'pending')->count(),
-            'processing' => Order::where('user_id', auth()->id())->where('status', 'processing')->count(),
-            'completed' => Order::where('user_id', auth()->id())->where('status', 'completed')->count(),
-            'cancelled' => Order::where('user_id', auth()->id())->where('status', 'cancelled')->count(),
+            'total' => Order::where('user_id', $userId)->count(),
+            'pending' => Order::where('user_id', $userId)->where('status', 'pending')->count(),
+            'processing' => Order::where('user_id', $userId)->where('status', 'processing')->count(),
+            'completed' => Order::where('user_id', $userId)->where('status', 'completed')->count(),
+            'cancelled' => Order::where('user_id', $userId)->where('status', 'cancelled')->count(),
         ];
 
         return view('frontend.orders.index', compact('orders', 'stats'));
@@ -75,19 +78,23 @@ class OrderController extends Controller
                     'max:' . $service->max_quantity,
                 ],
                 'description' => 'nullable|string|max:1000',
+                'extracted_uid' => 'nullable|string',
             ]);
 
             DB::beginTransaction();
 
+            $userId = Auth::id();
+            $user = User::find($userId);
+
             // Check if user has sufficient balance
             $totalAmount = ($service->price * $request->quantity) / 1000;
-            if (auth()->user()->balance < $totalAmount) {
+            if ($user->balance < $totalAmount) {
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
             }
 
             // Create the order
             $orderData = [
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'service_id' => $service->id,
                 'link' => $request->link,
                 'quantity' => $request->quantity,
@@ -95,8 +102,13 @@ class OrderController extends Controller
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'description' => $request->description,
-                'remains' => $request->quantity, // Set initial remains equal to quantity
+                'remains' => ceil($request->quantity * 1.15), // Add 15% more to remains
             ];
+            
+            // Add the extracted UID if it exists
+            if ($request->filled('extracted_uid')) {
+                $orderData['link_uid'] = $request->extracted_uid;
+            }
 
             $order = Order::create($orderData);
 
@@ -105,7 +117,8 @@ class OrderController extends Controller
             }
 
             // Deduct amount from user's balance
-            auth()->user()->decrement('balance', $totalAmount);
+            $user->balance -= $totalAmount;
+            $user->save();
 
             DB::commit();
 
@@ -124,8 +137,9 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
+        $userId = Auth::id();
         // Ensure the order belongs to the authenticated user
-        if ($order->user_id !== auth()->id()) {
+        if ($order->user_id !== $userId) {
             return redirect()->route('services')->with('error', 'Order not found.');
         }
 
@@ -135,8 +149,9 @@ class OrderController extends Controller
     public function updateStatus(Order $order, Request $request)
     {
         try {
+            $userId = Auth::id();
             // Ensure the order belongs to the authenticated user
-            if ($order->user_id !== auth()->id()) {
+            if ($order->user_id !== $userId) {
                 return response()->json(['error' => 'You are not authorized to update this order'], 403);
             }
 
@@ -159,6 +174,13 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            // Only allow cancellation of pending orders
+            if ($request->status === 'cancelled' && $order->status !== 'pending') {
+                return response()->json([
+                    'error' => 'Only pending orders can be cancelled'
+                ], 422);
+            }
+
             DB::beginTransaction();
 
             try {
@@ -169,7 +191,7 @@ class OrderController extends Controller
                     Log::info('Starting order cancellation process:', [
                         'order_id' => $order->id,
                         'old_status' => $oldStatus,
-                        'user_id' => auth()->id()
+                        'user_id' => $userId
                     ]);
 
                     // Load fresh user data to prevent race conditions
@@ -297,8 +319,11 @@ class OrderController extends Controller
             // Calculate total amount for all orders
             $totalAmount = ($service->price * $request->quantity * count($links)) / 1000;
             
+            $userId = Auth::id();
+            $user = User::find($userId);
+            
             // Check if user has sufficient balance
-            if (auth()->user()->balance < $totalAmount) {
+            if ($user->balance < $totalAmount) {
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
             }
 
@@ -310,7 +335,7 @@ class OrderController extends Controller
                 }
 
                 $orderData = [
-                    'user_id' => auth()->id(),
+                    'user_id' => $userId,
                     'service_id' => $service->id,
                     'link' => $link,
                     'quantity' => $request->quantity,
@@ -318,8 +343,26 @@ class OrderController extends Controller
                     'total_amount' => ($service->price * $request->quantity) / 1000,
                     'status' => 'pending',
                     'description' => $request->description,
-                    'remains' => $request->quantity, // Set initial remains equal to quantity
+                    'remains' => ceil($request->quantity * 1.15), // Add 15% more to remains
                 ];
+                
+                // For Facebook links, try to extract UID automatically
+                if (strpos($link, 'facebook.com') !== false || strpos($link, 'fb.com') !== false) {
+                    try {
+                        // Use the UID Finder service to extract the UID
+                        $uidFinder = app(\App\Services\UidFinderService::class);
+                        $uid = $uidFinder->extractUid($link, 'facebook');
+                        
+                        if ($uid) {
+                            $orderData['link_uid'] = $uid;
+                        }
+                    } catch (\Exception $e) {
+                        // If UID extraction fails, log the error but continue with order creation
+                        Log::warning('UID extraction failed for link: ' . $link, [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
 
                 $order = Order::create($orderData);
                 if ($order) {
@@ -332,7 +375,8 @@ class OrderController extends Controller
             }
 
             // Deduct total amount from user's balance
-            auth()->user()->decrement('balance', $totalAmount);
+            $user->balance -= $totalAmount;
+            $user->save();
 
             DB::commit();
 
@@ -356,8 +400,9 @@ class OrderController extends Controller
             return redirect()->route('orders.index')->with('error', 'No mass order details found.');
         }
 
+        $userId = Auth::id();
         $orders = Order::whereIn('id', $orderIds)
-            ->where('user_id', auth()->id())
+            ->where('user_id', $userId)
             ->with('service')
             ->orderBy('created_at', 'desc')
             ->get();

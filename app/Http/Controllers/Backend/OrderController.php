@@ -38,7 +38,7 @@ class OrderController extends Controller
             });
         }
 
-        $orders = $query->latest()->paginate(25)->withQueryString();
+        $orders = $query->orderBy('id', 'desc')->paginate(25)->withQueryString();
 
         // Get statistics
         $statistics = [
@@ -185,5 +185,29 @@ class OrderController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function updateUid(Request $request, Order $order)
+    {
+        $request->validate([
+            'link_uid' => 'required|string|max:255'
+        ]);
+
+        $order->link_uid = $request->link_uid;
+        $order->save();
+
+        return back()->with('success', 'Order UID updated successfully');
+    }
+
+    public function updateLink(Request $request, Order $order)
+    {
+        $request->validate([
+            'link' => 'required|string|max:1000'
+        ]);
+
+        $order->link = $request->link;
+        $order->save();
+
+        return back()->with('success', 'Order link updated successfully');
     }
 } 

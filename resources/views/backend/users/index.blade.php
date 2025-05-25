@@ -18,8 +18,44 @@
                 </div>
             @endif
 
+            <!-- Search Box -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form action="{{ route('admin.users.index') }}" method="GET" class="mb-3">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" name="search" class="form-control" placeholder="Search users by name, email, or ID..." value="{{ request('search') }}">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">Search</button>
+                                @if(request('search') || request('status'))
+                                    <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">Clear</a>
+                                @endif
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form action="{{ route('admin.users.index') }}" method="GET" class="mb-0">
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        <div class="float-right">
+                            <div class="input-group">
+                                <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
+                                    <option value="">All Statuses</option>
+                                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="table-responsive">
-                <table class="table table-bordered" id="usersTable" width="100%" cellspacing="0">
+                <table class="table table-bordered" width="100%" cellspacing="0">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -66,6 +102,9 @@
                                             <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-primary btn-sm" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            <a href="{{ route('admin.users.add-funds-form', $user) }}" class="btn btn-success btn-sm" title="Add Funds">
+                                                <i class="fas fa-plus-circle"></i>
+                                            </a>
                                             <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -86,8 +125,13 @@
                 </table>
             </div>
 
-            <div class="mt-3">
-                {{ $users->links() }}
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ $users->firstItem() ?? 0 }} to {{ $users->lastItem() ?? 0 }} of {{ $users->total() }} entries
+                </div>
+                <div>
+                    {{ $users->appends(request()->query())->links('vendor.pagination.bootstrap-4') }}
+                </div>
             </div>
         </div>
     </div>
@@ -101,21 +145,52 @@
     .table td {
         vertical-align: middle;
     }
+    .pagination {
+        margin-bottom: 0;
+        justify-content: flex-end;
+    }
+    .pagination .page-item .page-link {
+        padding: 0.5rem 0.75rem;
+        margin-left: -1px;
+        line-height: 1.25;
+        color: #4e73df;
+        background-color: #fff;
+        border: 1px solid #dddfeb;
+    }
+    .pagination .page-item.active .page-link {
+        z-index: 3;
+        color: #fff;
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #858796;
+        pointer-events: none;
+        cursor: auto;
+        background-color: #fff;
+        border-color: #dddfeb;
+    }
+    .pagination .page-item:first-child .page-link {
+        margin-left: 0;
+        border-top-left-radius: 0.35rem;
+        border-bottom-left-radius: 0.35rem;
+    }
+    .pagination .page-item:last-child .page-link {
+        border-top-right-radius: 0.35rem;
+        border-bottom-right-radius: 0.35rem;
+    }
+    .pagination .page-link:hover {
+        z-index: 2;
+        color: #224abe;
+        text-decoration: none;
+        background-color: #eaecf4;
+        border-color: #dddfeb;
+    }
+    .pagination .page-link:focus {
+        z-index: 3;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
 </style>
-<link href="{{ asset('backend/vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
-@endpush
-
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        $('#usersTable').DataTable({
-            "order": [[5, "desc"]],
-            "pageLength": 25,
-            "columnDefs": [
-                { "orderable": false, "targets": 6 }
-            ]
-        });
-    });
-</script>
 @endpush
 @endsection 

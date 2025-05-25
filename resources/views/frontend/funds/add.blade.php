@@ -3,6 +3,25 @@
 @section('title', 'Add Funds')
 
 @section('content')
+<!-- WhatsApp Admin Contact Banner -->
+<div class="alert alert-success mb-4 shadow-sm whatsapp-banner">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fab fa-whatsapp fa-3x text-success whatsapp-icon-pulse"></i>
+            </div>
+            <div>
+                <h3 class="mb-0">Adding Funds? Contact Admin First!</h3>
+                <p class="mb-0">Get <strong>instant approval</strong> and assistance with your fund deposit</p>
+            </div>
+        </div>
+        <a href="https://wa.me/+8801533651935?text=Hello,%20I%20want%20to%20add%20funds%20to%20my%20account.%20Please%20assist%20me." target="_blank" class="btn btn-lg btn-success">
+            <i class="fab fa-whatsapp me-2"></i>
+            <strong>Contact Admin: 01533651935</strong>
+        </a>
+    </div>
+</div>
+
 <!-- Page Header -->
 <div class="page-header d-print-none mb-4">
     <div class="container-xl">
@@ -37,7 +56,7 @@
                                 <label class="form-label required">Amount</label>
                                 <div class="input-group input-group-flat">
                                     <span class="input-group-text">
-                                        ৳
+                                        $
                                     </span>
                                     <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" 
                                         placeholder="Enter amount" step="0.01" min="1" required
@@ -300,11 +319,14 @@
                                 </span>
                                 View Balance History
                             </a>
-                            <a href="#" class="list-group-item list-group-item-action" onclick="window.open('https://wa.me/+880XXXXXXXXXX', '_blank')">
+                            <a href="#" class="list-group-item list-group-item-action" onclick="window.open('https://wa.me/+8801533651935', '_blank')">
                                 <span class="text-success me-2">
-                                    <i class="fab fa-whatsapp"></i>
+                                    <i class="fab fa-whatsapp fa-lg"></i>
                                 </span>
-                                Contact via WhatsApp
+                                <span class="d-flex align-items-center justify-content-between w-100">
+                                    <span>Contact Admin via WhatsApp</span>
+                                    <span class="badge bg-success text-white pulse-badge">01533651935</span>
+                                </span>
                             </a>
                             <a href="mailto:support@example.com" class="list-group-item list-group-item-action">
                                 <span class="text-info me-2">
@@ -326,6 +348,12 @@
                             Please read these instructions carefully before making a payment:
                         </div>
                         <ul class="list-unstyled space-y-2">
+                            <li>
+                                <span class="badge bg-success me-2">
+                                    <i class="fab fa-whatsapp"></i>
+                                </span>
+                                <strong>Contact admin on WhatsApp BEFORE making payment</strong>
+                            </li>
                             <li>
                                 <span class="badge bg-green-lt me-2">
                                     <i class="fas fa-check"></i>
@@ -356,6 +384,12 @@
                                 </span>
                                 Wait for verification (24h max)
                             </li>
+                            <li>
+                                <span class="badge bg-success me-2">
+                                    <i class="fab fa-whatsapp"></i>
+                                </span>
+                                <strong>Contact admin on WhatsApp for faster approval</strong>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -375,8 +409,13 @@
                                 +880 1XXXXXXXXX
                             </li>
                             <li class="mb-2">
-                                <i class="fab fa-whatsapp text-success me-2"></i>
-                                +880 1XXXXXXXXX
+                                <i class="fab fa-whatsapp text-success me-2 fa-lg"></i>
+                                <strong>Admin WhatsApp:</strong> 
+                                <a href="https://wa.me/+8801533651935" target="_blank" class="ms-2 btn btn-sm btn-success">
+                                    <i class="fab fa-whatsapp me-1"></i>
+                                    <strong>01533651935</strong>
+                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i>
+                                </a>
                             </li>
                             <li>
                                 <i class="fas fa-envelope text-info me-2"></i>
@@ -392,11 +431,38 @@
 @endsection
 
 @push('scripts')
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const paymentMethodSelect = document.querySelector('select[name="payment_method"]');
     const paymentMethodsContainer = document.querySelector('.payment-methods-container');
     const paymentInfos = document.querySelectorAll('.payment-info');
+    
+    // Show WhatsApp contact popup on page load
+    setTimeout(() => {
+        if (!sessionStorage.getItem('whatsappReminderShown')) {
+            Swal.fire({
+                title: 'Contact Admin Before Payment!',
+                html: 'For <strong>fastest approval</strong>, contact admin on WhatsApp <strong>before making your payment</strong>.<br><br>' +
+                      '<a href="https://wa.me/+8801533651935?text=Hello,%20I%20want%20to%20add%20funds%20to%20my%20account.%20Please%20assist%20me." target="_blank" class="btn btn-success">' +
+                      '<i class="fab fa-whatsapp me-2"></i>Contact Admin Now: 01533651935</a>',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#25D366',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Contact Admin Now',
+                cancelButtonText: 'Continue to Form'
+            }).then((result) => {
+                sessionStorage.setItem('whatsappReminderShown', 'true');
+                
+                if (result.isConfirmed) {
+                    // Open WhatsApp immediately
+                    window.open('https://wa.me/+8801533651935?text=Hello,%20I%20want%20to%20add%20funds%20to%20my%20account.%20Please%20assist%20me.', '_blank');
+                }
+            });
+        }
+    }, 1000);
     
     // Handle payment method change
     paymentMethodSelect.addEventListener('change', function() {
@@ -429,7 +495,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitButton = document.getElementById('submit-button');
     const loadingSpinner = document.getElementById('loading-spinner');
 
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(e) {
+        // Check if user has been reminded to contact admin
+        if (!window.paymentReminderShown) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Did You Contact Admin?',
+                html: 'For <strong>instant approval</strong>, we recommend contacting admin on WhatsApp before submitting.<br><br>' +
+                      '<a href="https://wa.me/+8801533651935?text=Hello,%20I%20want%20to%20add%20funds%20to%20my%20account.%20Please%20assist%20me." target="_blank" class="btn btn-success">' +
+                      '<i class="fab fa-whatsapp me-2"></i>Contact Admin: 01533651935</a>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#25D366',
+                confirmButtonText: 'Submit Anyway',
+                cancelButtonText: 'Contact Admin First'
+            }).then((result) => {
+                window.paymentReminderShown = true;
+                
+                if (result.isConfirmed) {
+                    // Submit the form
+                    submitButton.disabled = true;
+                    loadingSpinner.classList.remove('d-none');
+                    form.submit();
+                } else {
+                    // Open WhatsApp
+                    window.open('https://wa.me/+8801533651935?text=Hello,%20I%20want%20to%20add%20funds%20to%20my%20account.%20Please%20assist%20me.', '_blank');
+                }
+            });
+            
+            return false;
+        }
+        
+        // Normal submission process
         submitButton.disabled = true;
         loadingSpinner.classList.remove('d-none');
     });
@@ -524,6 +623,60 @@ function copyNumber(number) {
 
 .payment-methods-container {
     transition: all 0.3s ease;
+}
+
+/* WhatsApp pulse animation */
+.pulse-badge {
+    position: relative;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* WhatsApp Banner Styling */
+.whatsapp-banner {
+    background: linear-gradient(135deg, #dcfce7 0%, #22c55e 100%);
+    border: none;
+    border-radius: 12px;
+}
+
+.whatsapp-banner .btn-success {
+    background-color: #25D366;
+    border-color: #25D366;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.whatsapp-banner .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.whatsapp-icon-pulse {
+    animation: whatsappPulse 2s infinite;
+}
+
+@keyframes whatsappPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 </style>
 @endpush 

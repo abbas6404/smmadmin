@@ -60,6 +60,7 @@
                             @error('link')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <input type="hidden" name="extracted_uid" id="extracted_uid">
                         </div>
 
                         <div class="mb-3">
@@ -135,6 +136,8 @@
         const submitButton = document.getElementById('submitButton');
         const currentBalance = {{ auth()->user()->balance }};
         const pricePerThousand = {{ $service->price }};
+        const linkInput = document.getElementById('link');
+        const extractedUidInput = document.getElementById('extracted_uid');
 
         function calculateTotal() {
             const quantity = parseInt(quantityInput.value) || 0;
@@ -159,6 +162,56 @@
 
         quantityInput.addEventListener('input', calculateTotal);
         calculateTotal(); // Initial calculation
+        
+        // Auto Facebook UID Finder functionality
+        let uidExtractionTimeout;
+        
+        linkInput.addEventListener('input', function() {
+            // Clear any existing timeout
+            if (uidExtractionTimeout) {
+                clearTimeout(uidExtractionTimeout);
+            }
+            
+            // Set a new timeout to avoid making requests on every keystroke
+            uidExtractionTimeout = setTimeout(function() {
+                const url = linkInput.value.trim();
+                
+                // Basic validation
+                if (!url) {
+                    return;
+                }
+                
+                // Check if it's a Facebook URL
+                if (!url.includes('facebook.com') && !url.includes('fb.com')) {
+                    return;
+                }
+                
+                // Send AJAX request
+                $.ajax({
+                    url: '{{ route("uid-finder.extract") }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        url: url,
+                        platform: 'facebook'
+                    },
+                    success: function(response) {
+                        // Store the extracted UID in the hidden field
+                        extractedUidInput.value = response.uid;
+                        
+                        // Flash the input to show it's been processed
+                        linkInput.classList.add('is-valid');
+                        setTimeout(function() {
+                            linkInput.classList.remove('is-valid');
+                        }, 2000);
+                    },
+                    error: function(xhr) {
+                        // In case of error, just clear the extracted UID
+                        extractedUidInput.value = '';
+                    }
+                });
+            }, 800); // Wait for 800ms after typing stops
+        });
     });
 </script>
 @endpush 

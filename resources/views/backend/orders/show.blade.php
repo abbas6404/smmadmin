@@ -157,16 +157,34 @@
                                     <th>Link:</th>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <code class="small text-break">{{ $order->link }}</code>
+                                            <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                                <code class="small text-break">{{ $order->link }}</code>
+                                                <i class="fas fa-external-link-alt ms-1 small"></i>
+                                            </a>
                                             <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ $order->link }}')">
                                                 <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning ms-1" data-bs-toggle="modal" data-bs-target="#editLinkModal">
+                                                <i class="fas fa-edit"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <th>Link UID:</th>
-                                    <td><code>{{ $order->link_uid ?? 'Not available' }}</code></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <code>{{ $order->link_uid ?? 'Not available' }}</code>
+                                            @if($order->link_uid)
+                                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ $order->link_uid }}')">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            @endif
+                                            <button class="btn btn-sm btn-outline-warning ms-1" data-bs-toggle="modal" data-bs-target="#editUidModal">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -358,6 +376,66 @@
     word-break: break-all;
 }
 </style>
+
+<!-- Edit Link Modal -->
+<div class="modal fade" id="editLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('admin.orders.update-link', $order) }}" method="POST">
+                @csrf
+                <input type="hidden" name="_method" value="PATCH">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Order Link</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Link</label>
+                        <input type="text" class="form-control" value="{{ $order->link }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Link</label>
+                        <textarea name="link" class="form-control" required rows="3">{{ old('link', $order->link) }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit UID Modal -->
+<div class="modal fade" id="editUidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('admin.orders.update-uid', $order) }}" method="POST">
+                @csrf
+                <input type="hidden" name="_method" value="PATCH">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Order UID</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current UID</label>
+                        <input type="text" class="form-control" value="{{ $order->link_uid ?? 'Not available' }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New UID</label>
+                        <input type="text" name="link_uid" class="form-control" value="{{ old('link_uid', $order->link_uid) }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update UID</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection
 

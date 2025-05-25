@@ -223,13 +223,12 @@
                                 <input type="checkbox" class="form-check-input" id="selectAll">
                             </th>
                             <th>Order ID</th>
-                            <th>User</th>
-                            <th>Service</th>
                             <th>Link</th>
+                            <th>UID</th>
+                            <th>Quantity</th>
                             <th>Start Count</th>
                             <th>Remains</th>
                             <th>Status</th>
-                            <th>Created At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -240,16 +239,28 @@
                                     <input type="checkbox" class="form-check-input order-checkbox" value="{{ $order->id }}">
                                 </td>
                                 <td><code>{{ $order->id }}</code></td>
-                                <td>{{ $order->user ? $order->user->name : 'Deleted User' }}</td>
-                                <td>{{ $order->service ? $order->service->name : 'Deleted Service' }}</td>
                                 <td>
                                     <div class="text-truncate" style="max-width: 200px;">
-                                        <code class="small">{{ $order->link }}</code>
+                                        <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                            <code class="small">{{ $order->link }}</code>
+                                            <i class="fas fa-external-link-alt small"></i>
+                                        </a>
                                         <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link }}')">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                     </div>
                                 </td>
+                                <td>
+                                    @if($order->link_uid)
+                                        <code>{{ $order->link_uid }}</code>
+                                        <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link_uid }}')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    @else
+                                        <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td>{{ number_format($order->quantity ?? 0) }}</td>
                                 <td>{{ number_format($order->start_count ?? 0) }}</td>
                                 <td>{{ number_format($order->remains ?? 0) }}</td>
                                 <td>
@@ -261,7 +272,6 @@
                                         {{ ucfirst($order->status) }}
                                     </span>
                                 </td>
-                                <td>{{ $order->created_at->format('Y-m-d H:i:s') }}</td>
                                 <td>
                                     <a href="{{ route('admin.orders.show', $order) }}" 
                                        class="btn btn-sm btn-info" 
@@ -272,7 +282,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center">No orders found</td>
+                                <td colspan="9" class="text-center">No orders found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -379,7 +389,7 @@ function refreshTable() {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        alert('Link copied to clipboard!');
+        alert('Copied to clipboard!');
     });
 }
 

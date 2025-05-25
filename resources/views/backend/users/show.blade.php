@@ -7,6 +7,9 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">User Details</h1>
         <div>
+            <a href="{{ route('admin.users.add-funds-form', $user) }}" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> Add Funds
+            </a>
             <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> Edit User
             </a>
@@ -15,6 +18,12 @@
             </a>
         </div>
     </div>
+
+    @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
 
     <div class="row">
         <!-- User Information -->

@@ -31,6 +31,14 @@
         </div>
     </div>
 
+    <div class="nav-section">Tools</div>
+    <div class="nav-items">
+        <a href="{{ route('uid-finder') }}" class="sidebar-link {{ request()->routeIs('uid-finder') ? 'active' : '' }}">
+            <i class="fas fa-search"></i>
+            <span>UID Finder</span>
+        </a>
+    </div>
+
     <div class="nav-section">Orders</div>
     <div class="nav-items">
         <a href="#ordersSubmenu" class="sidebar-link" data-bs-toggle="collapse" aria-expanded="false" data-title="Orders">

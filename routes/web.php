@@ -10,6 +10,7 @@ use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\ProfileController;
 use App\Http\Controllers\Frontend\FundsController;
 use App\Http\Controllers\Frontend\DownloadController;
+use App\Http\Controllers\Frontend\UidFinderController;
 
 // Public Download Page
 Route::get('/download', [DownloadController::class, 'index'])->name('downloads');
@@ -61,6 +62,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/funds', [FundsController::class, 'index'])->name('funds.index');
     Route::get('/funds/add', [FundsController::class, 'add'])->name('funds.add');
     Route::post('/funds/process', [FundsController::class, 'process'])->name('funds.process');
+    
+    // UID Finder Tool
+    Route::get('/tools/uid-finder', [UidFinderController::class, 'index'])->name('uid-finder');
+    Route::post('/tools/uid-finder/extract', [UidFinderController::class, 'extract'])->name('uid-finder.extract');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {

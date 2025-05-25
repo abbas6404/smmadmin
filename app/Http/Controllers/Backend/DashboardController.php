@@ -64,6 +64,13 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
             
+        // Get recent pending payments specifically
+        $pendingPaymentsList = ManualPayment::with('user')
+            ->where('status', 'pending')
+            ->latest()
+            ->take(5)
+            ->get();
+            
         // Get monthly revenue data for chart
         $monthlyRevenue = Order::select(
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
@@ -125,6 +132,7 @@ class DashboardController extends Controller
             'pendingPayments',
             'recentOrders',
             'recentPayments',
+            'pendingPaymentsList',
             'monthlyRevenue',
             'dailyCompletedOrders',
             'todayCompletedOrders',

@@ -98,7 +98,7 @@
                             <th>Service</th>
                             <th>Link</th>
                             <th>Start Count</th>
-                            <th>Remains</th>
+                            <th>Quantity</th>
                             <th>Status</th>
                             <th>Progress</th>
                             <th>Created</th>
@@ -111,12 +111,18 @@
                             <td>#{{ $order->id }}</td>
                             <td>{{ $order->service->name }}</td>
                             <td>
-                                <a href="{{ $order->link }}" target="_blank" class="text-primary">
-                                    {{ Str::limit($order->link, 30) }}
-                                </a>
+                                <div class="d-flex align-items-center">
+                                    <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-primary">
+                                        {{ Str::limit($order->link, 30) }}
+                                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link }}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
                             </td>
                             <td>{{ number_format($order->start_count) }}</td>
-                            <td>{{ number_format($order->remains) }}</td>
+                            <td>{{ number_format($order->quantity) }}</td>
                             <td>
                                 @if(in_array($order->status, ['pending', 'processing']))
                                     <select class="form-select form-select-sm status-select" 
@@ -125,7 +131,9 @@
                                         <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>Pending</option>
                                         <option value="processing" {{ $order->status === 'processing' ? 'selected' : '' }}>Processing</option>
                                         <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                        <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                        @if($order->status === 'pending')
+                                        <option value="cancelled">Cancelled</option>
+                                        @endif
                                     </select>
                                 @else
                                     <span class="badge bg-{{ 
@@ -138,7 +146,7 @@
                                 @endif
                             </td>
                             <td>
-                                @if($order->remains !== null)
+                                @if($order->quantity !== null)
                                     @php
                                         $completed = $order->quantity - ($order->remains ?? 0);
                                         $percentage = ($completed / $order->quantity) * 100;
@@ -218,6 +226,16 @@ $(document).ready(function() {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
+
+    // Function to copy text to clipboard
+    window.copyToClipboard = function(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show a temporary tooltip or alert
+            alert('Copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    };
 
     // Handle status changes
     $('.status-select').on('change', function(e) {

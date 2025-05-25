@@ -62,15 +62,6 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="balance">Balance</label>
-                            <input type="number" class="form-control @error('balance') is-invalid @enderror" id="balance" name="balance" value="{{ old('balance', $user->balance) }}" min="0" step="0.01">
-                            @error('balance')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
                             <label for="status">Status</label>
                             <select class="form-control @error('status') is-invalid @enderror" id="status" name="status" required>
                                 <option value="">Select Status</option>

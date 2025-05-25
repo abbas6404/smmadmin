@@ -369,7 +369,7 @@
                             <i class="fas fa-sync-alt"></i> Refresh System Info
                         </button>
                     </div>
-                </div>
+                    </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped">

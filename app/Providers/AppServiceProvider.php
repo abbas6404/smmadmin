@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Services\UidFinderService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +12,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register the UidFinderService
+        $this->app->singleton(UidFinderService::class, function ($app) {
+            return new UidFinderService();
+        });
     }
 
     /**

@@ -28,6 +28,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     
     // User Management Routes
     Route::post('/users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+    Route::get('/users/{user}/add-funds', [UserController::class, 'showAddFunds'])->name('users.add-funds-form');
+    Route::post('/users/{user}/add-funds', [UserController::class, 'addFunds'])->name('users.add-funds');
     Route::resource('users', UserController::class);
     
     // Order Management Routes
@@ -37,6 +39,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/orders/bulk-update', [OrderController::class, 'bulkUpdate'])->name('orders.bulk-update');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::patch('/orders/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
+    Route::patch('/orders/{order}/link', [OrderController::class, 'updateLink'])->name('orders.update-link');
     
     // Service Management Routes
     Route::resource('services', ServiceController::class);

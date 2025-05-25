@@ -26,8 +26,29 @@
                         </div>
                         <div class="col-md-6">
                             <h5 class="mb-3">Target Information</h5>
-                            <p><strong>Link:</strong> <a href="{{ $order->link }}" target="_blank" class="text-primary">{{ $order->link }}</a></p>
-                            <p><strong>Link UID:</strong> <code>{{ $order->link_uid ?? 'Not available' }}</code></p>
+                            <p>
+                                <strong>Link:</strong> 
+                                <div class="d-flex align-items-center">
+                                    <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-primary">
+                                        {{ $order->link }}
+                                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ $order->link }}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </p>
+                            <p>
+                                <strong>Link UID:</strong> 
+                                <div class="d-flex align-items-center">
+                                    <code>{{ $order->link_uid ?? 'Not available' }}</code>
+                                    @if($order->link_uid)
+                                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ $order->link_uid }}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    @endif
+                                </div>
+                            </p>
                             <p><strong>Start Count:</strong> {{ number_format($order->start_count ?? 0) }}</p>
                             <p><strong>Remaining:</strong> {{ number_format($order->remains ?? 0) }}</p>
                             @if($order->start_count && $order->remains)
@@ -79,4 +100,17 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection
+
+@push('scripts')
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show a temporary tooltip or alert
+        alert('Copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+}
+</script>
+@endpush 

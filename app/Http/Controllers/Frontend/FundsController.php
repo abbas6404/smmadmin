@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -13,21 +15,36 @@ use Exception;
 
 class FundsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
         
-        // Get paginated balance history
-        $balanceHistory = $user->balanceHistories()
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        // Get balance history query
+        $query = $user->balanceHistories()
+            ->orderBy('created_at', 'desc');
+            
+        // Filter by type if provided
+        if ($request->has('type') && in_array($request->type, ['credit', 'debit'])) {
+            $query->where('type', $request->type);
+        }
+        
+        // Paginate results
+        $balanceHistory = $query->paginate(10)->withQueryString();
 
         // Calculate total spent from orders
         $totalSpent = $user->orders()
             ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
+            
+        // Get pending manual payments
+        $pendingPayments = DB::table('manual_payments')
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('frontend.funds.index', compact('balanceHistory', 'totalSpent'));
+        return view('frontend.funds.index', compact('balanceHistory', 'totalSpent', 'pendingPayments'));
     }
 
     public function add()
@@ -48,7 +65,7 @@ class FundsController extends Controller
         try {
             DB::beginTransaction();
 
-            $user = auth()->user();
+            $user = Auth::user();
             $amount = $request->amount;
 
             // Handle file upload if provided

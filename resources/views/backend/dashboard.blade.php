@@ -110,6 +110,26 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Pending Payments -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Pending Payments</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ number_format($pendingPayments) }}</div>
+                            <div class="text-xs text-muted mt-1">
+                                <a href="{{ route('admin.payments.pending') }}" class="text-danger">View Pending Payments</a>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Active Accounts Stats -->
@@ -225,6 +245,85 @@
             </div>
         </div>
     </div>
+
+    <!-- Pending Payments Section -->
+    @if(count($pendingPaymentsList) > 0)
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4 border-left-warning">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Pending Payments Requiring Attention
+                    </h6>
+                    <a href="{{ route('admin.payments.pending') }}" class="btn btn-sm btn-warning">
+                        View All Pending Payments
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($pendingPaymentsList as $payment)
+                                <tr>
+                                    <td>#{{ $payment->id }}</td>
+                                    <td>
+                                        <a href="{{ route('admin.users.show', $payment->user) }}" class="text-decoration-none">
+                                            {{ $payment->user->name }}
+                                        </a>
+                                    </td>
+                                    <td>${{ number_format($payment->amount, 2) }}</td>
+                                    <td>{{ $payment->payment_method_label }}</td>
+                                    <td>{{ $payment->created_at->format('M d, Y H:i') }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ route('admin.payments.show', $payment) }}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <form action="{{ route('admin.payments.approve', $payment) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('PUT')
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-success" 
+                                                        onclick="return confirm('Are you sure you want to approve this payment?')"
+                                                        title="Approve Payment">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('admin.payments.reject', $payment) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('PUT')
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-danger" 
+                                                        onclick="return confirm('Are you sure you want to reject this payment?')"
+                                                        title="Reject Payment">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- Recent Activity -->
     <div class="row">
