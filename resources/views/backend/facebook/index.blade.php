@@ -271,6 +271,7 @@
                             <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Processing</option>
                             <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                            <option value="logout" {{ request('status') === 'logout' ? 'selected' : '' }}>Logout</option>
                         </select>
                     </div>
 

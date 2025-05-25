@@ -28,6 +28,21 @@
         </div>
     </div>
 
+    <!-- System Notification Alert -->
+    @if($systemNotificationActive)
+    <div class="alert alert-warning mb-4" role="alert">
+        <div class="d-flex">
+            <div class="me-3">
+                <i class="fas fa-exclamation-triangle fa-2x"></i>
+            </div>
+            <div>
+                <h4 class="alert-heading">Ordering Temporarily Unavailable</h4>
+                <p class="mb-0">{{ $systemNotificationMessage }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Services Grid -->
     <div class="row" id="servicesGrid">
         @forelse($services as $service)
@@ -71,12 +86,21 @@
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-grid gap-2">
-                        <a href="{{ route('orders.create', $service->id) }}" class="btn btn-primary">
-                            <i class="fas fa-shopping-cart me-2"></i> Order Now
-                        </a>
-                        <a href="{{ route('orders.mass-create', $service->id) }}" class="btn btn-info">
-                            <i class="fas fa-layer-group me-2"></i> Mass Order
-                        </a>
+                        @if($systemNotificationActive)
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-ban me-2"></i> Ordering Unavailable
+                            </button>
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-ban me-2"></i> Mass Order Unavailable
+                            </button>
+                        @else
+                            <a href="{{ route('orders.create', $service->id) }}" class="btn btn-primary">
+                                <i class="fas fa-shopping-cart me-2"></i> Order Now
+                            </a>
+                            <a href="{{ route('orders.mass-create', $service->id) }}" class="btn btn-info">
+                                <i class="fas fa-layer-group me-2"></i> Mass Order
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>

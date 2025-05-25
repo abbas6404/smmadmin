@@ -187,32 +187,37 @@
         <div class="card-body">
             <!-- Filters -->
             <div class="row mb-3">
-                <div class="col-md-3">
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Processing</option>
-                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <input type="date" class="form-control" id="dateFrom" placeholder="From Date" value="{{ request('date_from') }}">
-                        <input type="date" class="form-control" id="dateTo" placeholder="To Date" value="{{ request('date_to') }}">
-                        <button class="btn btn-outline-secondary" type="button" onclick="applyFilters()">
-                            <i class="fas fa-filter"></i>
-                        </button>
+                <form id="filterForm" action="{{ route('admin.orders.index') }}" method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <select class="form-select" id="statusFilter" name="status" onchange="this.form.submit()">
+                            <option value="">All Status</option>
+                            <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Processing</option>
+                            <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        </select>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search orders..." value="{{ request('search') }}">
-                        <button class="btn btn-primary" type="button" onclick="applyFilters()">
-                            <i class="fas fa-search"></i>
-                        </button>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="dateFrom" name="date_from" placeholder="From Date" value="{{ request('date_from') }}">
+                            <input type="date" class="form-control" id="dateTo" name="date_to" placeholder="To Date" value="{{ request('date_to') }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="fas fa-filter"></i> Apply
+                            </button>
+                            <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-danger">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
                     </div>
-                </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="searchInput" name="search" placeholder="Search orders..." value="{{ request('search') }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <div class="table-responsive">
@@ -341,21 +346,6 @@
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Remove DataTable initialization since we're using Laravel's pagination
-    
-    // Filter handling
-    $('#statusFilter').on('change', applyFilters);
-    $('#dateFrom, #dateTo').on('change', function() {
-        if ($('#dateFrom').val() && $('#dateTo').val()) {
-            applyFilters();
-        }
-    });
-    $('#searchInput').on('keyup', function(e) {
-        if (e.key === 'Enter') {
-            applyFilters();
-        }
-    });
-
     // Select All Checkbox Handler
     const selectAll = document.getElementById('selectAll');
     const orderCheckboxes = document.querySelectorAll('.order-checkbox');
@@ -373,6 +363,34 @@ document.addEventListener('DOMContentLoaded', function() {
     orderCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateBulkActionButton);
     });
+    
+    // Date range auto-submit
+    const dateFrom = document.getElementById('dateFrom');
+    const dateTo = document.getElementById('dateTo');
+    
+    if (dateFrom && dateTo) {
+        dateFrom.addEventListener('change', function() {
+            if (dateTo.value) {
+                document.getElementById('filterForm').submit();
+            }
+        });
+        
+        dateTo.addEventListener('change', function() {
+            if (dateFrom.value) {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    }
+    
+    // Enter key on search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    }
 });
 
 function updateBulkActionButton() {
@@ -391,30 +409,6 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         alert('Copied to clipboard!');
     });
-}
-
-function applyFilters() {
-    const status = document.getElementById('statusFilter').value;
-    const dateFrom = document.getElementById('dateFrom').value;
-    const dateTo = document.getElementById('dateTo').value;
-    const search = document.getElementById('searchInput').value;
-
-    let url = new URL(window.location.href);
-    
-    // Clear existing parameters
-    url.searchParams.delete('status');
-    url.searchParams.delete('date_from');
-    url.searchParams.delete('date_to');
-    url.searchParams.delete('search');
-    url.searchParams.delete('page');
-
-    // Add new parameters only if they have values
-    if (status) url.searchParams.set('status', status);
-    if (dateFrom) url.searchParams.set('date_from', dateFrom);
-    if (dateTo) url.searchParams.set('date_to', dateTo);
-    if (search) url.searchParams.set('search', search);
-
-    window.location.href = url.toString();
 }
 
 function bulkAction(action) {
@@ -462,19 +456,21 @@ function bulkAction(action) {
 }
 
 function exportToExcel() {
-    const status = document.getElementById('statusFilter').value;
-    const dateFrom = document.getElementById('dateFrom').value;
-    const dateTo = document.getElementById('dateTo').value;
-    const search = document.getElementById('searchInput').value;
-
-    let url = new URL('/admin/orders/export', window.location.origin);
+    // Clone the current filter form
+    const form = document.getElementById('filterForm').cloneNode(true);
     
-    if (status) url.searchParams.set('status', status);
-    if (dateFrom) url.searchParams.set('date_from', dateFrom);
-    if (dateTo) url.searchParams.set('date_to', dateTo);
-    if (search) url.searchParams.set('search', search);
-
-    window.location.href = url.toString();
+    // Change the action to the export URL
+    form.action = "{{ route('admin.orders.export') }}";
+    
+    // Make it invisible and submit it
+    form.style.display = 'none';
+    document.body.appendChild(form);
+    form.submit();
+    
+    // Clean up
+    setTimeout(() => {
+        document.body.removeChild(form);
+    }, 1000);
 }
 </script>
 @endsection 

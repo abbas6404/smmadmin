@@ -55,6 +55,16 @@ class OrderController extends Controller
 
     public function create(Service $service)
     {
+        // Check if system notification is active
+        $setting = \App\Models\Setting::where('key', 'system_notification_active')->first();
+        $systemNotificationActive = $setting && ($setting->value === '1' || $setting->value === true);
+        
+        if ($systemNotificationActive) {
+            $messageSetting = \App\Models\Setting::where('key', 'system_notification_message')->first();
+            $systemNotificationMessage = $messageSetting ? $messageSetting->value : 'Ordering is temporarily unavailable.';
+            return redirect()->route('services')->with('error', $systemNotificationMessage);
+        }
+
         if ($service->status !== 'active') {
             return redirect()->route('services')->with('error', 'This service is currently unavailable.');
         }
@@ -65,6 +75,16 @@ class OrderController extends Controller
     public function store(Request $request, Service $service)
     {
         try {
+            // Check if system notification is active
+            $setting = \App\Models\Setting::where('key', 'system_notification_active')->first();
+            $systemNotificationActive = $setting && ($setting->value === '1' || $setting->value === true);
+            
+            if ($systemNotificationActive) {
+                $messageSetting = \App\Models\Setting::where('key', 'system_notification_message')->first();
+                $systemNotificationMessage = $messageSetting ? $messageSetting->value : 'Ordering is temporarily unavailable.';
+                return redirect()->route('services')->with('error', $systemNotificationMessage);
+            }
+
             if ($service->status !== 'active') {
                 return redirect()->route('services')->with('error', 'This service is currently unavailable.');
             }
@@ -280,16 +300,36 @@ class OrderController extends Controller
 
     public function massCreate(Service $service)
     {
+        // Check if system notification is active
+        $setting = \App\Models\Setting::where('key', 'system_notification_active')->first();
+        $systemNotificationActive = $setting && ($setting->value === '1' || $setting->value === true);
+        
+        if ($systemNotificationActive) {
+            $messageSetting = \App\Models\Setting::where('key', 'system_notification_message')->first();
+            $systemNotificationMessage = $messageSetting ? $messageSetting->value : 'Ordering is temporarily unavailable.';
+            return redirect()->route('services')->with('error', $systemNotificationMessage);
+        }
+
         if ($service->status !== 'active') {
             return redirect()->route('services')->with('error', 'This service is currently unavailable.');
         }
 
-        return view('frontend.orders.create-mass', compact('service'));
+        return view('frontend.orders.mass-create', compact('service'));
     }
 
     public function massStore(Request $request, Service $service)
     {
         try {
+            // Check if system notification is active
+            $setting = \App\Models\Setting::where('key', 'system_notification_active')->first();
+            $systemNotificationActive = $setting && ($setting->value === '1' || $setting->value === true);
+            
+            if ($systemNotificationActive) {
+                $messageSetting = \App\Models\Setting::where('key', 'system_notification_message')->first();
+                $systemNotificationMessage = $messageSetting ? $messageSetting->value : 'Ordering is temporarily unavailable.';
+                return redirect()->route('services')->with('error', $systemNotificationMessage);
+            }
+
             if ($service->status !== 'active') {
                 return redirect()->route('services')->with('error', 'This service is currently unavailable.');
             }

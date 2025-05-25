@@ -119,6 +119,7 @@
                     User Information
                 </div>
                 <div class="card-body">
+                    @if($payment->user)
                     <h5 class="text-muted mb-1">Name</h5>
                     <p class="mb-3">
                         <a href="{{ route('admin.users.show', $payment->user) }}" class="text-decoration-none">
@@ -134,6 +135,12 @@
 
                     <h5 class="text-muted mb-1">Member Since</h5>
                     <p class="mb-0">{{ $payment->user->created_at->format('F j, Y') }}</p>
+                    @else
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        User account has been deleted
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>

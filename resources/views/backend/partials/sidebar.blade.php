@@ -128,6 +128,9 @@
             <a href="{{ route('admin.settings.security') }}" class="sidebar-link {{ request()->routeIs('admin.settings.security') ? 'active' : '' }}">
                 <span>Security</span>
             </a>
+            <a href="{{ route('admin.settings.system') }}" class="sidebar-link {{ request()->routeIs('admin.settings.system') ? 'active' : '' }}">
+                <span>System</span>
+            </a>
         </div>
     </div>
 </div> 

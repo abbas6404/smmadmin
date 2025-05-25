@@ -57,9 +57,13 @@
                             <tr>
                                 <td><code>{{ $payment->id }}</code></td>
                                 <td>
+                                    @if($payment->user)
                                     <a href="{{ route('admin.users.show', $payment->user) }}" class="text-decoration-none">
                                         {{ $payment->user->name }}
                                     </a>
+                                    @else
+                                    <span class="text-muted">Deleted User</span>
+                                    @endif
                                 </td>
                                 <td>${{ number_format($payment->amount, 2) }}</td>
                                 <td>{{ $payment->payment_method_label }}</td>

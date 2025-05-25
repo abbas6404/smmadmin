@@ -396,7 +396,7 @@
                                 @forelse($recentPayments as $payment)
                                 <tr>
                                     <td>#{{ $payment->id }}</td>
-                                    <td>{{ $payment->user->name }}</td>
+                                    <td>{{ $payment->user ? $payment->user->name : 'Deleted User' }}</td>
                                     <td>${{ number_format($payment->amount, 2) }}</td>
                                     <td>{{ ucfirst($payment->payment_method) }}</td>
                                     <td>

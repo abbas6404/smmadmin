@@ -14,28 +14,42 @@ class OrderController extends Controller
         $query = Order::with(['user', 'service']);
 
         // Filter by status if provided
-        if ($request->has('status') && $request->status !== 'all') {
+        if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
         // Filter by date range
-        if ($request->has('date_from')) {
+        if ($request->has('date_from') && !empty($request->date_from)) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        if ($request->has('date_to')) {
+        if ($request->has('date_to') && !empty($request->date_to)) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         // Search by order ID, user name, or link
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'LIKE', "%{$search}%")
-                  ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhere('link', 'LIKE', "%{$search}%");
-            });
+        if ($request->has('search') && !empty($request->search)) {
+            $search = trim($request->search);
+            
+            // Check if search is numeric (likely an ID)
+            if (is_numeric($search)) {
+                $query->where('id', '=', $search);
+            } else {
+                // Safe search with bindings
+                $query->where(function($q) use ($search) {
+                    $searchTerm = '%' . $search . '%';
+                    $q->where('link', 'LIKE', $searchTerm)
+                      ->orWhere(function($subQuery) use ($searchTerm) {
+                          $subQuery->whereHas('user', function($userQuery) use ($searchTerm) {
+                              $userQuery->where('name', 'LIKE', $searchTerm);
+                          });
+                      })
+                      ->orWhere(function($subQuery) use ($searchTerm) {
+                          $subQuery->whereHas('service', function($serviceQuery) use ($searchTerm) {
+                              $serviceQuery->where('name', 'LIKE', $searchTerm);
+                          });
+                      });
+                });
+            }
         }
 
         $orders = $query->orderBy('id', 'desc')->paginate(25)->withQueryString();
@@ -121,24 +135,40 @@ class OrderController extends Controller
         $query = Order::with(['user', 'service']);
 
         // Apply filters
-        if ($request->has('status') && $request->status !== 'all') {
+        if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
-        if ($request->has('date_from')) {
+        if ($request->has('date_from') && !empty($request->date_from)) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        if ($request->has('date_to')) {
+        if ($request->has('date_to') && !empty($request->date_to)) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'LIKE', "%{$search}%")
-                  ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhere('link', 'LIKE', "%{$search}%");
-            });
+        
+        // Search by order ID, user name, or link
+        if ($request->has('search') && !empty($request->search)) {
+            $search = trim($request->search);
+            
+            // Check if search is numeric (likely an ID)
+            if (is_numeric($search)) {
+                $query->where('id', '=', $search);
+            } else {
+                // Safe search with bindings
+                $query->where(function($q) use ($search) {
+                    $searchTerm = '%' . $search . '%';
+                    $q->where('link', 'LIKE', $searchTerm)
+                      ->orWhere(function($subQuery) use ($searchTerm) {
+                          $subQuery->whereHas('user', function($userQuery) use ($searchTerm) {
+                              $userQuery->where('name', 'LIKE', $searchTerm);
+                          });
+                      })
+                      ->orWhere(function($subQuery) use ($searchTerm) {
+                          $subQuery->whereHas('service', function($serviceQuery) use ($searchTerm) {
+                              $serviceQuery->where('name', 'LIKE', $searchTerm);
+                          });
+                      });
+                });
+            }
         }
 
         $orders = $query->latest()->get();

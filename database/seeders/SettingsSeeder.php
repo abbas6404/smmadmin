@@ -48,6 +48,10 @@ class SettingsSeeder extends Seeder
             // Terms and Privacy
             'terms_content' => 'Your terms and conditions content here.',
             'privacy_content' => 'Your privacy policy content here.',
+            
+            // System Notification
+            'system_notification_active' => false,
+            'system_notification_message' => 'We are currently experiencing high volume of orders. New orders will be accepted tomorrow. Thank you for your patience!',
         ];
 
         foreach ($settings as $key => $value) {

@@ -59,4 +59,51 @@ class SettingsController extends Controller
 
         return back()->with('success', 'Password updated successfully');
     }
+
+    public function systemSettings()
+    {
+        $settings = \App\Models\Setting::all()->pluck('value', 'key')->toArray();
+        return view('backend.settings.system', compact('settings'));
+    }
+
+    public function updateSystemSettings(Request $request)
+    {
+        $request->validate([
+            'system_notification_message' => 'required|string|max:500',
+        ]);
+
+        // Debug the incoming request
+        \Illuminate\Support\Facades\Log::info('System settings update request:', [
+            'has_notification_active' => $request->has('system_notification_active'),
+            'notification_message' => $request->system_notification_message
+        ]);
+
+        // Update system notification settings - explicitly convert checkbox to boolean
+        $isActive = $request->has('system_notification_active') ? true : false;
+        
+        // Use the models directly instead of the facade to ensure they work
+        $activeSettings = \App\Models\Setting::where('key', 'system_notification_active')->first();
+        if ($activeSettings) {
+            $activeSettings->value = $isActive ? '1' : '0';
+            $activeSettings->save();
+        } else {
+            \App\Models\Setting::create([
+                'key' => 'system_notification_active',
+                'value' => $isActive ? '1' : '0'
+            ]);
+        }
+        
+        $messageSettings = \App\Models\Setting::where('key', 'system_notification_message')->first();
+        if ($messageSettings) {
+            $messageSettings->value = $request->system_notification_message;
+            $messageSettings->save();
+        } else {
+            \App\Models\Setting::create([
+                'key' => 'system_notification_message',
+                'value' => $request->system_notification_message
+            ]);
+        }
+
+        return back()->with('success', 'System settings updated successfully');
+    }
 } 

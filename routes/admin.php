@@ -93,6 +93,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.update-profile');
     Route::get('/settings/security', [SettingsController::class, 'security'])->name('settings.security');
     Route::put('/settings/security', [SettingsController::class, 'updateSecurity'])->name('settings.update-security');
+    Route::get('/settings/system', [SettingsController::class, 'systemSettings'])->name('settings.system');
+    Route::post('/settings/system', [SettingsController::class, 'updateSystemSettings'])->name('settings.system.update');
 
     // Submission Batch Routes
     Route::resource('submission-batch', SubmissionBatchController::class);
