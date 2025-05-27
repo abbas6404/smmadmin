@@ -52,6 +52,14 @@ class OrderController extends Controller
                     'message' => 'PC profile is not active'
                 ], 403);
             }
+            
+            // Check for auto shutdown first - return early if enabled
+            if ($pcProfile->auto_shutdown) {
+                return response()->json([
+                    'status' => 'shutdown',
+                    'message' => 'Auto shutdown activated'
+                ]);
+            }
 
             // First, mark orders with empty link_uid as failed
             Order::whereIn('status', ['pending', 'processing'])
@@ -65,7 +73,7 @@ class OrderController extends Controller
                 ]);
 
             // Get orders with their service category
-            $orders = Order::whereIn('status', ['pending', 'processing'])
+            $orders = Order::where('status', 'processing')
                 ->where('refunded', false)
                 ->whereNotNull('link')
                 ->where('link', '!=', '')
@@ -81,14 +89,14 @@ class OrderController extends Controller
                     return $order->service->category;
                 });
 
-            // Get total pending and processing orders count
-            $totalPendingProcessingOrders = Order::whereIn('status', ['pending', 'processing'])
+            // Get total processing orders count
+            $totalProcessingOrders = Order::where('status', 'processing')
                 ->where('refunded', false)
                 ->count();
 
             // Process Facebook orders
             if (isset($orders['facebook'])) {
-                $result = $this->processFacebookOrders($pcProfile, $orders['facebook'], $totalPendingProcessingOrders);
+                $result = $this->processFacebookOrders($pcProfile, $orders['facebook'], $totalProcessingOrders);
                 if ($result['status'] === 'success') {
                     return response()->json($result);
                 }
@@ -96,7 +104,7 @@ class OrderController extends Controller
 
             // Process Gmail orders
             if (isset($orders['gmail'])) {
-                $result = $this->processGmailOrders($pcProfile, $orders['gmail'], $totalPendingProcessingOrders);
+                $result = $this->processGmailOrders($pcProfile, $orders['gmail'], $totalProcessingOrders);
                 if ($result['status'] === 'success') {
                     return response()->json($result);
                 }
@@ -104,11 +112,11 @@ class OrderController extends Controller
 
             // If we reach here, no orders could be processed
             return response()->json([
-                'status' => 'shutdown',
+                'status' => 'no_orders',
                 'message' => 'Not enough new orders available for any account',
                 'max_order_limit' => $pcProfile->max_order_limit,
                 'min_order_limit' => $pcProfile->min_order_limit,
-                'total_pending_processing_orders' => $totalPendingProcessingOrders,
+                'total_pending_processing_orders' => $totalProcessingOrders,
                 'data' => []
             ]);
 
@@ -124,7 +132,7 @@ class OrderController extends Controller
     /**
      * Process Facebook orders
      */
-    private function processFacebookOrders(PcProfile $pcProfile, $orders, $totalPendingProcessingOrders)
+    private function processFacebookOrders(PcProfile $pcProfile, $orders, $totalProcessingOrders)
     {
         // Get all Facebook accounts with Chrome profiles for this PC profile that haven't been used
         $facebookAccounts = FacebookAccount::with('chromeProfile')
@@ -133,7 +141,11 @@ class OrderController extends Controller
             ->where('have_use', false)
             ->where('lang', 'en')
             ->whereHas('chromeProfile')  // Only get accounts that have a chrome profile
-            ->get();
+            ->get()
+            // Filter out accounts that have reached their daily limit
+            ->filter(function($account) {
+                return !$account->hasReachedDailyLimit();
+            });
 
         // If no unused accounts found, reset all accounts and try again
         if ($facebookAccounts->isEmpty()) {
@@ -148,13 +160,17 @@ class OrderController extends Controller
                 ->where('have_use', false)
                 ->where('lang', 'en')
                 ->whereHas('chromeProfile')
-                ->get();
+                ->get()
+                // Filter out accounts that have reached their daily limit
+                ->filter(function($account) {
+                    return !$account->hasReachedDailyLimit();
+                });
 
             if ($facebookAccounts->isEmpty()) {
                 return [
                     'status' => 'error',
-                    'message' => 'No active Facebook accounts found',
-                    'total_pending_processing_orders' => $totalPendingProcessingOrders
+                    'message' => 'No active Facebook accounts found or all accounts have reached daily limit',
+                    'total_pending_processing_orders' => $totalProcessingOrders
                 ];
             }
         }
@@ -190,7 +206,9 @@ class OrderController extends Controller
                     // Update Facebook account's order_link_uid and have_use
                     $facebookAccount->order_link_uid = $allOrderLinkUids;
                     $facebookAccount->have_use = true;
-                    $facebookAccount->save();
+                    
+                    // Increment the use count
+                    $facebookAccount->incrementUseCount();
 
                     // Update orders status to processing and decrement remains
                     $availableOrders->each(function ($order) {
@@ -222,7 +240,7 @@ class OrderController extends Controller
                         'message' => 'Facebook orders retrieved successfully',
                         'max_order_limit' => $pcProfile->max_order_limit,
                         'min_order_limit' => $pcProfile->min_order_limit,
-                        'total_pending_processing_orders' => $totalPendingProcessingOrders,
+                        'total_pending_processing_orders' => $totalProcessingOrders,
                         'category' => 'facebook',
                         'facebook_account' => [
                             'id' => $facebookAccount->id,
@@ -233,6 +251,7 @@ class OrderController extends Controller
                             'have_page' => $facebookAccount->have_page,
                             'have_post' => $facebookAccount->have_post,
                             'lang' => $facebookAccount->lang,
+                            'use_count' => $facebookAccount->use_count,
                             'account_cookies' => $facebookAccount->account_cookies,
                             'chrome_profile' => [
                                 'id' => $facebookAccount->chromeProfile->id,
@@ -266,14 +285,14 @@ class OrderController extends Controller
         return [
             'status' => 'error',
             'message' => 'Not enough Facebook orders available',
-            'total_pending_processing_orders' => $totalPendingProcessingOrders
+            'total_pending_processing_orders' => $totalProcessingOrders
         ];
     }
 
     /**
      * Process Gmail orders
      */
-    private function processGmailOrders(PcProfile $pcProfile, $orders, $totalPendingProcessingOrders)
+    private function processGmailOrders(PcProfile $pcProfile, $orders, $totalProcessingOrders)
     {
         // Get all Gmail accounts with Chrome profiles for this PC profile that haven't been used
         $gmailAccounts = GmailAccount::with('chromeProfile')
@@ -301,7 +320,7 @@ class OrderController extends Controller
                 return [
                     'status' => 'error',
                     'message' => 'No active Gmail accounts found',
-                    'total_pending_processing_orders' => $totalPendingProcessingOrders
+                    'total_pending_processing_orders' => $totalProcessingOrders
                 ];
             }
         }
@@ -369,7 +388,7 @@ class OrderController extends Controller
                         'message' => 'Gmail orders retrieved successfully',
                         'max_order_limit' => $pcProfile->max_order_limit,
                         'min_order_limit' => $pcProfile->min_order_limit,
-                        'total_pending_processing_orders' => $totalPendingProcessingOrders,
+                        'total_pending_processing_orders' => $totalProcessingOrders,
                         'category' => 'gmail',
                         'gmail_account' => [
                             'id' => $gmailAccount->id,
@@ -409,7 +428,7 @@ class OrderController extends Controller
         return [
             'status' => 'error',
             'message' => 'Not enough Gmail orders available',
-            'total_pending_processing_orders' => $totalPendingProcessingOrders
+            'total_pending_processing_orders' => $totalProcessingOrders
         ];
     }
 } 

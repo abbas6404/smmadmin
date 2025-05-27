@@ -142,4 +142,33 @@ class FacebookAccount extends Model
     {
         return $this->belongsTo(GmailAccount::class);
     }
+    
+    /**
+     * Increment the use count for this account
+     */
+    public function incrementUseCount(): void
+    {
+        $this->use_count++;
+        $this->total_count++;
+        $this->save();
+    }
+    
+    /**
+     * Reset the daily use count for this account
+     */
+    public function resetUseCount(): void
+    {
+        $this->use_count = 0;
+        $this->have_use = false;
+        $this->save();
+    }
+    
+    /**
+     * Check if the account has reached its daily use limit
+     */
+    public function hasReachedDailyLimit(): bool
+    {
+        $dailyLimit = Setting::where('key', 'facebook_account_daily_use_limit')->first()->value ?? 4;
+        return $this->use_count >= (int)$dailyLimit;
+    }
 } 

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('hardware_id')->unique()->nullable();
             $table->string('access_token', 64)->unique()->nullable();
             $table->enum('status', ['active', 'inactive', 'blocked', 'deleted'])->default('inactive');
+            $table->boolean('auto_shutdown')->default(false);
             $table->integer('max_profile_limit')->default(6);
             $table->integer('max_order_limit')->default(5);
             $table->integer('min_profile_limit')->default(1);
