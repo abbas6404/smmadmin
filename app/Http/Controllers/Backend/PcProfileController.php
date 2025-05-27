@@ -161,6 +161,23 @@ class PcProfileController extends Controller
         // Find profile including soft-deleted ones
         $pcProfile = PcProfile::withTrashed()->findOrFail($id);
 
+        // Handle auto_shutdown toggle separately
+        if ($request->has('auto_shutdown') && !$request->filled('pc_name')) {
+            $pcProfile->auto_shutdown = (bool)$request->auto_shutdown;
+            $pcProfile->save();
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Auto shutdown setting updated successfully',
+                    'auto_shutdown' => $pcProfile->auto_shutdown
+                ]);
+            }
+            
+            return redirect()->route('admin.pc-profiles.index')
+                ->with('success', 'Auto shutdown setting updated successfully');
+        }
+
         $validated = $request->validate([
             'pc_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',

@@ -235,7 +235,7 @@ class OrderController extends Controller
 
         $order->link_uid = $request->link_uid;
         $order->save();
-        
+
         // Check if it's an AJAX request
         if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {
             return response()->json([

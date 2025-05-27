@@ -337,6 +337,7 @@
         "have_page": true,
         "have_post": false,
         "lang": "en",
+        "use_count": 2,
         "account_cookies": {
             "cookie1": "value1",
             "cookie2": "value2"
@@ -401,12 +402,17 @@
 }</code></pre>
                             <p>Response (No Orders Available):</p>
                             <pre><code>{
-    "status": "shutdown",
+    "status": "no_orders",
     "message": "Not enough new orders available for any account",
     "max_order_limit": 5,
     "min_order_limit": 1,
     "total_pending_processing_orders": 0,
     "data": []
+}</code></pre>
+                            <p>Response (Auto Shutdown):</p>
+                            <pre><code>{
+    "status": "shutdown",
+    "message": "Auto shutdown activated"
 }</code></pre>
                             <p>Possible Error Responses:</p>
                             <ul>
@@ -417,14 +423,16 @@
                             <p>Notes:</p>
                             <ul>
                                 <li>Orders are automatically marked as failed if they have an empty link_uid</li>
-                                <li>Only orders with valid links, quantities, and prices are returned</li>
+                                <li>Only processing orders with valid links, quantities, and prices are returned</li>
                                 <li>Orders are grouped by service category (facebook/gmail)</li>
-                                <li>For Facebook orders, only accounts with Chrome profiles and language set to 'en' are considered</li>
+                                <li>For Facebook accounts, only those with Chrome profiles, language set to 'en', and that haven't reached daily usage limit are considered</li>
                                 <li>For Gmail orders, only accounts with Chrome profiles are considered</li>
                                 <li>If no unused accounts are found, all accounts are reset and tried again</li>
                                 <li>Orders are filtered to avoid duplicates using link_uid</li>
                                 <li>When orders are assigned, their status is updated to 'processing' and remains are decremented</li>
                                 <li>If remains reaches 0, the order is marked as 'completed'</li>
+                                <li>The Facebook account's use_count is incremented each time it's used for orders</li>
+                                <li>If a PC profile has auto_shutdown enabled, the API will return a shutdown response regardless of order availability</li>
                             </ul>
                         </div>
                     </div>
@@ -495,6 +503,34 @@ Content-Type: application/json</code></pre>
                                 <li><strong>422 Validation Error</strong> - Invalid input data</li>
                             </ul>
                         </div>
+                    </div>
+
+                    <div class="api-section">
+                        <h5>Facebook Account Usage Limits</h5>
+                        <p>The system includes a feature to limit how many times a Facebook account can be used per day:</p>
+                        <ul>
+                            <li>Each Facebook account has a <code>use_count</code> field that tracks daily usage</li>
+                            <li>A global <code>facebook_account_daily_use_limit</code> setting controls the maximum allowed uses (default: 4)</li>
+                            <li>Accounts that reach their daily limit are automatically excluded from order processing</li>
+                            <li>Use counts are reset daily at a configurable time via a scheduled command</li>
+                        </ul>
+                        <p>When retrieving orders via the API, Facebook accounts that have reached their daily limit will not be assigned new orders.</p>
+                    </div>
+
+                    <div class="api-section">
+                        <h5>Auto-Shutdown Feature</h5>
+                        <p>The system includes an auto-shutdown feature for PC clients:</p>
+                        <ul>
+                            <li>Each PC profile has an <code>auto_shutdown</code> boolean flag</li>
+                            <li>When enabled, the API will return a <code>shutdown</code> status in responses</li>
+                            <li>PC clients should check for this status and initiate shutdown when received</li>
+                        </ul>
+                        <p>When the <code>auto_shutdown</code> flag is enabled for a PC profile, the <code>/api/orders</code> endpoint will return a simplified response with status "shutdown", regardless of order availability:</p>
+                        <pre><code>{
+    "status": "shutdown",
+    "message": "Auto shutdown activated"
+}</code></pre>
+                        <p>PC clients should implement handlers to detect this status and initiate a system shutdown when received.</p>
                     </div>
 
                     <div class="api-section">

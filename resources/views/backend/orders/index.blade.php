@@ -80,7 +80,7 @@
 
     <!-- Toast Notifications Container -->
     <div class="toast-container"></div>
-    
+
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
@@ -292,7 +292,7 @@
                                                     autocomplete="off">
                                                 <button type="submit" class="btn btn-outline-primary btn-sm" title="Save UID">
                                                     <i class="fas fa-save"></i>
-                                                </button>
+                                        </button>
                                             </form>
                                         </div>
                                     @else

@@ -115,13 +115,15 @@ class OrderController extends Controller
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
             }
 
-            // Check if user has reached their daily order limit
-            $todayOrderCount = Order::where('user_id', $userId)
-                ->whereDate('created_at', now()->toDateString())
-                ->count();
-                
-            if ($todayOrderCount >= $user->daily_order_limit) {
-                return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
+            // Check if user has reached their daily order limit (only if daily_order_limit > 0)
+            if ($user->daily_order_limit > 0) {
+                $todayOrderCount = Order::where('user_id', $userId)
+                    ->whereDate('created_at', now()->toDateString())
+                    ->count();
+                    
+                if ($todayOrderCount >= $user->daily_order_limit) {
+                    return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
+                }
             }
 
             // Create the order
@@ -176,6 +178,84 @@ class OrderController extends Controller
         }
 
         return view('frontend.orders.show', compact('order'));
+    }
+
+    public function edit(Order $order)
+    {
+        $userId = Auth::id();
+        // Ensure the order belongs to the authenticated user
+        if ($order->user_id !== $userId) {
+            return redirect()->route('orders.index')->with('error', 'Order not found.');
+        }
+
+        // Only allow editing pending orders
+        if ($order->status !== 'pending') {
+            return redirect()->route('orders.show', $order)->with('error', 'Only pending orders can be edited.');
+        }
+
+        $service = $order->service;
+
+        return view('frontend.orders.edit', compact('order', 'service'));
+    }
+
+    public function update(Request $request, Order $order)
+    {
+        try {
+            $userId = Auth::id();
+            // Ensure the order belongs to the authenticated user
+            if ($order->user_id !== $userId) {
+                return redirect()->route('orders.index')->with('error', 'Order not found.');
+            }
+
+            // Only allow updating pending orders
+            if ($order->status !== 'pending') {
+                return redirect()->route('orders.show', $order)->with('error', 'Only pending orders can be updated.');
+            }
+
+            $service = $order->service;
+
+            $request->validate([
+                'link' => 'required|url',
+                'description' => 'nullable|string|max:1000',
+                'link_uid' => 'nullable|string|max:255',
+            ]);
+
+            DB::beginTransaction();
+
+            $user = User::find($userId);
+
+            // Determine the price to use (custom rate or service price)
+            $price = $user->custom_rate ?? $service->price;
+
+            // Keep the original quantity and total amount
+            $totalAmount = $order->total_amount;
+
+            // Update the order (keeping quantity unchanged)
+            $order->link = $request->link;
+            // Quantity remains unchanged
+            $order->price = $price;
+            // Total amount remains unchanged
+            $order->description = $request->description;
+            
+            if ($request->filled('link_uid')) {
+                $order->link_uid = $request->link_uid;
+            }
+
+            $order->save();
+
+            DB::commit();
+
+            return redirect()->route('orders.show', $order)
+                ->with('success', 'Order updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order update failed:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'An error occurred while updating your order: ' . $e->getMessage());
+        }
     }
 
     public function updateStatus(Order $order, Request $request)
@@ -382,18 +462,20 @@ class OrderController extends Controller
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
             }
 
-            // Check if user has reached their daily order limit
-            $todayOrderCount = Order::where('user_id', $userId)
-                ->whereDate('created_at', now()->toDateString())
-                ->count();
-                
-            // Check if adding these new orders would exceed the daily limit
-            if ($todayOrderCount + count($links) > $user->daily_order_limit) {
-                $ordersRemaining = max(0, $user->daily_order_limit - $todayOrderCount);
-                if ($ordersRemaining == 0) {
-                    return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
-                } else {
-                    return back()->with('error', "You can only place {$ordersRemaining} more orders today due to your daily limit of {$user->daily_order_limit}.");
+            // Check if user has reached their daily order limit (only if daily_order_limit > 0)
+            if ($user->daily_order_limit > 0) {
+                $todayOrderCount = Order::where('user_id', $userId)
+                    ->whereDate('created_at', now()->toDateString())
+                    ->count();
+                    
+                // Check if adding these new orders would exceed the daily limit
+                if ($todayOrderCount + count($links) > $user->daily_order_limit) {
+                    $ordersRemaining = max(0, $user->daily_order_limit - $todayOrderCount);
+                    if ($ordersRemaining == 0) {
+                        return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
+                    } else {
+                        return back()->with('error', "You can only place {$ordersRemaining} more orders today due to your daily limit of {$user->daily_order_limit}.");
+                    }
                 }
             }
 
@@ -493,9 +575,9 @@ class OrderController extends Controller
                 return response()->json(['error' => 'You are not authorized to update this order'], 403);
             }
             
-            // Only allow updating UID for pending orders
-            if ($order->status !== 'pending') {
-                return response()->json(['error' => 'Only pending orders can be updated'], 422);
+            // Only allow updating UID for pending or processing orders
+            if (!in_array($order->status, ['pending', 'processing'])) {
+                return response()->json(['error' => 'Only pending or processing orders can be updated'], 422);
             }
 
             $request->validate([

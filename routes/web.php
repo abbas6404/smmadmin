@@ -46,6 +46,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders/create/{service}', [OrderController::class, 'create'])->name('orders.create');
     Route::post('/orders/{service}', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+    Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::patch('/orders/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
     

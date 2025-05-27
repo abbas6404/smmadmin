@@ -160,10 +160,13 @@ body {
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.2) transparent;
+    height: calc(100vh - var(--header-height));
+    max-height: calc(100vh - var(--header-height));
 }
 
 .sidebar-content::-webkit-scrollbar {
     width: 5px;
+    height: 5px;
 }
 
 .sidebar-content::-webkit-scrollbar-track {
@@ -173,6 +176,17 @@ body {
 .sidebar-content::-webkit-scrollbar-thumb {
     background-color: rgba(255,255,255,0.2);
     border-radius: 10px;
+}
+
+/* For Firefox */
+.sidebar-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+/* For IE and Edge */
+.sidebar-content {
+    -ms-overflow-style: auto;
 }
 
 /* Main Content Styles */

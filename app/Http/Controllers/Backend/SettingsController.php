@@ -79,7 +79,7 @@ class SettingsController extends Controller
             'notification_message' => $request->system_notification_message,
             'facebook_daily_limit' => $request->facebook_account_daily_use_limit
         ]);
-
+        
         // Get all settings that need to be updated
         $settingsToUpdate = [
             'system_notification_active' => $request->has('system_notification_active') ? '1' : '0',

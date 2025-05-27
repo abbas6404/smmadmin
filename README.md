@@ -10,6 +10,7 @@ A comprehensive Social Media Marketing (SMM) administration panel built with Lar
   - Chrome profile management
   - Batch submission handling
   - Facebook Quick Check for account validation
+  - Facebook account usage limits and tracking
 
 - **User Management**
   - User registration and authentication
@@ -33,6 +34,7 @@ A comprehensive Social Media Marketing (SMM) administration panel built with Lar
   - Facebook account management API
   - Order processing API
   - Facebook Quick Check API for Chrome extensions
+  - Auto-shutdown functionality for PC clients
 
 ## Requirements
 
@@ -84,6 +86,47 @@ php artisan migrate --seed
 php artisan serve
 ```
 
+## Facebook Account Usage Limits
+
+The system includes a feature to limit how many times a Facebook account can be used per day:
+
+- Each Facebook account has a `use_count` field that tracks daily usage
+- A global `facebook_account_daily_use_limit` setting controls the maximum allowed uses (default: 4)
+- Accounts that reach their daily limit are automatically excluded from order processing
+- Use counts are reset daily at a configurable time
+
+### Setting Up the Facebook Account Reset Scheduler
+
+#### On Windows Development Environment:
+
+1. Create a batch file `reset_facebook.bat`:
+```
+@echo off
+cd C:\path\to\smmadmin
+php artisan facebook:reset-use-counts
+```
+
+2. Schedule it using Windows Task Scheduler:
+   - Create a new Basic Task
+   - Set to run daily at your desired time (e.g., 8:10 AM)
+   - Action: Start a program
+   - Program: path to your batch file
+
+#### On Linux/Unix Production Server:
+
+Add a cron job:
+```
+# Reset Facebook account use counts daily at 8:10 AM
+10 8 * * * cd /path/to/smmadmin && php artisan facebook:reset-use-counts >> /dev/null 2>&1
+```
+
+#### Manual Reset:
+
+You can manually reset all Facebook account use counts with:
+```bash
+php artisan facebook:reset-use-counts
+```
+
 ## API Documentation
 
 The application includes several APIs for integration with external systems:
@@ -112,6 +155,15 @@ X-API-KEY: YOUR_API_KEY
 ```
 
 Configure your API key in `config/services.php` or via the `.env` file.
+
+## Auto-Shutdown Feature
+
+The system includes an auto-shutdown feature for PC clients:
+
+- Each PC profile has an `auto_shutdown` boolean flag
+- When enabled, the API will return a `shutdown` status in responses
+- PC clients should check for this status and initiate shutdown when received
+- This helps manage resources by shutting down PCs when they're not needed
 
 ## Usage
 

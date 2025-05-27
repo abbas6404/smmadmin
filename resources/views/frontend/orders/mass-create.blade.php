@@ -5,40 +5,74 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-10">
+            <!-- Back button -->
+            <div class="mb-4">
+                <a href="{{ route('services') }}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Services
+                </a>
+            </div>
+            
             @php
-                $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
-                $orderLimitPercentage = (1 - ($remainingOrders / auth()->user()->daily_order_limit)) * 100;
+                $dailyOrderLimit = auth()->user()->daily_order_limit > 0 ? auth()->user()->daily_order_limit : 100;
+                $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+                $remainingOrders = $dailyOrderLimit - $todayOrderCount;
+                $orderLimitPercentage = ($dailyOrderLimit > 0) ? ($todayOrderCount / $dailyOrderLimit) * 100 : 0;
             @endphp
             
-            @if($remainingOrders <= 0)
-            <div class="alert alert-danger mb-4">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>Daily Order Limit Reached!</h5>
-                <p>You've used all of your {{ auth()->user()->daily_order_limit }} orders for today. Your limit will reset tomorrow.</p>
+            @if($remainingOrders <= 0 && $dailyOrderLimit > 0)
+            <div class="alert alert-danger mb-4 shadow-sm border-0 rounded-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle fa-2x me-3"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading">Daily Order Limit Reached!</h5>
+                        <p class="mb-0">You've used all of your {{ $dailyOrderLimit }} orders for today. Your limit will reset tomorrow.</p>
+                    </div>
+                </div>
             </div>
-            @elseif($remainingOrders <= 2)
-            <div class="alert alert-warning mb-4">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Almost at Daily Limit!</h5>
-                <p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>
-                <div class="progress" style="height: 5px;">
+            @elseif($remainingOrders <= 5 && $dailyOrderLimit > 0)
+            <div class="alert alert-warning mb-4 shadow-sm border-0 rounded-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading">Almost at Daily Limit!</h5>
+                        <p class="mb-0">You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ $dailyOrderLimit }}. Mass ordering may exceed your limit.</p>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 5px; border-radius: 3px;">
                     <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>
                 </div>
             </div>
             @endif
             
             <!-- Current Balance Card -->
-            <div class="card shadow mb-4">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-4">
                     <div class="row align-items-center">
                         <div class="col">
-                            <div class="text-muted">Current Balance</div>
-                            <h3 class="mb-0">${{ number_format(auth()->user()->balance, 2) }}</h3>
-                            <small class="text-muted">
-                                Order Limit: {{ auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }} of {{ auth()->user()->daily_order_limit }} remaining today
-                            </small>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                    <i class="fas fa-wallet text-primary fa-2x"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted">Current Balance</div>
+                                    <h3 class="mb-0 fw-bold">${{ number_format(auth()->user()->balance, 2) }}</h3>
+                                    <small class="text-muted">
+                                        @if($dailyOrderLimit > 0)
+                                        <i class="fas fa-calendar-day me-1"></i> {{ $remainingOrders }} of {{ $dailyOrderLimit }} orders remaining today
+                                        @else
+                                        <i class="fas fa-infinity me-1"></i> No daily order limit applied
+                                        @endif
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-auto">
-                            <a href="{{ route('funds.add') }}" class="btn btn-primary">
+                            <a href="{{ route('funds.add') }}" class="btn btn-primary rounded-pill shadow-sm">
                                 <i class="fas fa-plus me-2"></i>Add Funds
                             </a>
                         </div>
@@ -46,139 +80,141 @@
                 </div>
             </div>
 
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Create Mass Order - {{ $service->name }}</h6>
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header py-3 bg-white border-0">
+                    <h5 class="m-0 fw-bold text-primary">
+                        <i class="fas fa-layer-group me-2"></i>Create Multiple Orders
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="service-info mb-4">
-                        <h5 class="mb-3">Service Details</h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p class="mb-1">
-                                    <strong>Price per 1000:</strong> 
-                                    @if(auth()->user()->custom_rate)
-                                        <span class="text-success">${{ number_format(auth()->user()->custom_rate, 4) }}</span>
-                                        <small class="text-muted">(Custom rate)</small>
-                                    @else
-                                        ${{ number_format($service->price, 2) }}
-                                    @endif
-                                </p>
-                                <p class="mb-1"><strong>Min Order:</strong> {{ number_format($service->min_quantity) }}</p>
-                                <p class="mb-1"><strong>Max Order:</strong> {{ number_format($service->max_quantity) }}</p>
+                <div class="card-body p-4">
+                    <div class="alert alert-info rounded-3 mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle fa-2x me-3"></i>
                             </div>
-                            <div class="col-md-6">
-                                @if($service->requirements)
-                                <p class="mb-1"><strong>Requirements:</strong></p>
-                                <ul class="mb-0">
-                                    @foreach(json_decode($service->requirements) as $requirement)
-                                    <li>{{ $requirement }}</li>
-                                    @endforeach
-                                </ul>
-                                @endif
+                            <div>
+                                <h5 class="alert-heading">How to Place Mass Orders</h5>
+                                <p>Use the format: <code>service_id|link|quantity</code> - one order per line.</p>
+                                <p class="mb-0">Example: <code>12|https://example.com/post|1000</code></p>
                             </div>
                         </div>
                     </div>
-                    
-                    <form action="{{ route('orders.mass-store', $service) }}" method="POST">
+
+                    <form action="{{ route('orders.mass-store') }}" method="POST" id="massOrderForm">
                         @csrf
                         
-                        <div class="mb-3">
-                            <label for="links" class="form-label">Links (One per line)</label>
-                            <textarea 
-                                name="links" 
-                                id="links" 
-                                rows="5" 
-                                class="form-control @error('links') is-invalid @enderror" 
-                                required
-                                placeholder="https://example.com/link1&#10;https://example.com/link2&#10;https://example.com/link3"
-                            >{{ old('links') }}</textarea>
-                            @error('links')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted">Each line represents a separate order with the same quantity</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="quantity" class="form-label">Quantity per Link</label>
-                            <input 
-                                type="number" 
-                                name="quantity" 
-                                id="quantity" 
-                                class="form-control @error('quantity') is-invalid @enderror" 
-                                value="{{ old('quantity', $service->min_quantity) }}"
-                                min="{{ $service->min_quantity }}"
-                                max="{{ $service->max_quantity }}"
-                                required
-                            >
-                            @error('quantity')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted">
-                                Min: {{ $service->min_quantity }} - Max: {{ $service->max_quantity }}
-                            </small>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Order Summary</label>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Number of Links:</span>
-                                        <span id="linkCount">0</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Quantity per Link:</span>
-                                        <span id="quantityPerLink">{{ $service->min_quantity }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Price per 1000:</span>
-                                        <span>
-                                            @if(auth()->user()->custom_rate)
-                                                ${{ number_format(auth()->user()->custom_rate, 4) }}
-                                            @else
-                                                ${{ number_format($service->price, 2) }}
-                                            @endif
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="mb-4">
+                                    <label for="orders" class="form-label fw-medium">Mass Orders <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-end-0">
+                                            <i class="fas fa-list-ol text-primary"></i>
                                         </span>
+                                        <textarea class="form-control @error('orders') is-invalid @enderror border-start-0 ps-0" 
+                                            id="orders" name="orders" rows="10" 
+                                            placeholder="service_id|link|quantity">{{ old('orders') }}</textarea>
+                                        @error('orders')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
                                     </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Total Amount:</span>
-                                        <strong>$<span id="totalAmount">0.00</span></strong>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i> Enter one order per line in the format: service_id|link|quantity
                                     </div>
-                                    <hr>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Current Balance:</span>
-                                        <span>${{ number_format(auth()->user()->balance, 2) }}</span>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="description" class="form-label fw-medium">Additional Notes (Optional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-end-0">
+                                            <i class="fas fa-comment text-primary"></i>
+                                        </span>
+                                        <textarea class="form-control border-start-0 ps-0" id="description" name="description" rows="3" 
+                                            placeholder="Add any specific instructions or notes here">{{ old('description') }}</textarea>
                                     </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Remaining Balance:</span>
-                                        <strong class="text-primary">$<span id="remainingBalance">{{ number_format(auth()->user()->balance, 2) }}</span></strong>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0 rounded-3 h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold mb-3">Available Services</h6>
+                                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                            <table class="table table-sm table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>ID</th>
+                                                        <th>Service</th>
+                                                        <th>Price</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($services as $service)
+                                                    <tr class="service-row" data-id="{{ $service->id }}" data-min="{{ $service->min_quantity }}" data-max="{{ $service->max_quantity }}">
+                                                        <td>{{ $service->id }}</td>
+                                                        <td>
+                                                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $service->name }}">
+                                                                {{ $service->name }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            @if(auth()->user()->custom_rate)
+                                                                ${{ number_format(auth()->user()->custom_rate, 4) }}
+                                                            @else
+                                                                ${{ number_format($service->price, 2) }}
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description (Optional)</label>
-                            <textarea 
-                                name="description" 
-                                id="description" 
-                                rows="2" 
-                                class="form-control @error('description') is-invalid @enderror"
-                                placeholder="Any additional notes..."
-                            >{{ old('description') }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="card border-0 bg-light rounded-3 mb-4">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3">Order Summary</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 rounded-3 bg-white shadow-sm">
+                                            <div class="text-muted small">Total Orders</div>
+                                            <div class="fw-bold" id="totalOrders">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 rounded-3 bg-white shadow-sm">
+                                            <div class="text-muted small">Total Quantity</div>
+                                            <div class="fw-bold" id="totalQuantity">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 rounded-3 bg-white shadow-sm">
+                                            <div class="text-muted small">Total Amount</div>
+                                            <div class="fw-bold text-primary" id="totalAmount">$0.00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted">Current Balance</div>
+                                        <div class="fw-medium">${{ number_format(auth()->user()->balance, 2) }}</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-muted">Remaining Balance</div>
+                                        <div class="fw-bold text-primary" id="remainingBalance">${{ number_format(auth()->user()->balance, 2) }}</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary" id="submitButton">
-                                <i class="fas fa-shopping-cart me-2"></i> Place Mass Order
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm" id="submitButton">
+                                <i class="fas fa-paper-plane me-2"></i> Place Mass Order
                             </button>
-                            <a href="{{ route('services') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i> Back to Services
-                            </a>
                         </div>
                     </form>
                 </div>
@@ -188,31 +224,72 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+.card {
+    transition: all 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.form-control:focus, .input-group-text {
+    border-color: #4e73df;
+    box-shadow: none;
+}
+.input-group-text {
+    border-right: none;
+}
+.form-control {
+    border-left: none;
+}
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background-color: rgba(0,0,0,0.05);
+}
+.service-row {
+    cursor: pointer;
+}
+.service-row:hover {
+    background-color: rgba(78, 115, 223, 0.05);
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Daily Order Limit Notification
         @php
-            $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
-            $usedOrders = auth()->user()->daily_order_limit - $remainingOrders;
-            $orderLimitPercentage = ($usedOrders / auth()->user()->daily_order_limit) * 100;
+            $dailyOrderLimit = auth()->user()->daily_order_limit > 0 ? auth()->user()->daily_order_limit : 100;
+            $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+            $remainingOrders = $dailyOrderLimit - $todayOrderCount;
+            $usedOrders = $todayOrderCount;
+            $orderLimitPercentage = ($dailyOrderLimit > 0) ? ($usedOrders / $dailyOrderLimit) * 100 : 0;
         @endphp
         
-        @if($remainingOrders <= 0)
+        @if($remainingOrders <= 0 && $dailyOrderLimit > 0)
             Swal.fire({
                 title: 'Daily Order Limit Reached!',
                 html: '<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>' +
-                      '<p>You\'ve used all of your {{ auth()->user()->daily_order_limit }} orders for today.</p>' +
+                      '<p>You\'ve used all of your {{ $dailyOrderLimit }} orders for today.</p>' +
                       '<p>Your limit will reset tomorrow.</p>',
                 icon: 'error',
                 confirmButtonText: 'Got it',
                 confirmButtonColor: '#dc3545'
             });
-        @elseif($remainingOrders <= 2)
+        @elseif($remainingOrders <= 5 && $dailyOrderLimit > 0)
             Swal.fire({
                 title: 'Almost at Daily Limit!',
                 html: '<div class="text-center mb-3"><i class="fas fa-exclamation-triangle text-warning fa-4x"></i></div>' +
-                      '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>' +
+                      '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ $dailyOrderLimit }}.</p>' +
+                      '<p>Mass ordering may exceed your limit.</p>' +
                       '<div class="progress mt-3" style="height: 10px;">' +
                       '  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>' +
                       '</div>',
@@ -221,103 +298,214 @@
                 confirmButtonColor: '#ffc107'
             });
         @endif
-        
-        const linksTextarea = document.getElementById('links');
-        const quantityInput = document.getElementById('quantity');
-        const linkCountSpan = document.getElementById('linkCount');
-        const quantityPerLinkSpan = document.getElementById('quantityPerLink');
-        const totalAmountSpan = document.getElementById('totalAmount');
-        const remainingBalanceSpan = document.getElementById('remainingBalance');
+
+        const ordersTextarea = document.getElementById('orders');
+        const totalOrdersElement = document.getElementById('totalOrders');
+        const totalQuantityElement = document.getElementById('totalQuantity');
+        const totalAmountElement = document.getElementById('totalAmount');
+        const remainingBalanceElement = document.getElementById('remainingBalance');
         const submitButton = document.getElementById('submitButton');
         const currentBalance = {{ auth()->user()->balance }};
-        const pricePerThousand = {{ auth()->user()->custom_rate ?? $service->price }};
+        const serviceRows = document.querySelectorAll('.service-row');
+        const massOrderForm = document.getElementById('massOrderForm');
         const dailyOrderLimit = {{ auth()->user()->daily_order_limit }};
         const usedOrdersToday = {{ \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }};
         const remainingOrdersToday = dailyOrderLimit - usedOrdersToday;
-        const orderForm = document.querySelector('form');
-
-        function calculateTotal() {
-            // Count non-empty lines in the textarea
-            const links = linksTextarea.value.split('\n').filter(link => link.trim() !== '');
-            const linkCount = links.length;
-            const quantity = parseInt(quantityInput.value) || 0;
+        
+        // Make service rows clickable to add to textarea
+        serviceRows.forEach(row => {
+            row.addEventListener('click', function() {
+                const serviceId = this.dataset.id;
+                const minQuantity = this.dataset.min;
+                
+                // Add a new line with the service ID template
+                const currentText = ordersTextarea.value;
+                const newLine = currentText ? '\n' : '';
+                ordersTextarea.value += `${newLine}${serviceId}|https://|${minQuantity}`;
+                
+                // Focus and move cursor to end
+                ordersTextarea.focus();
+                ordersTextarea.setSelectionRange(ordersTextarea.value.length, ordersTextarea.value.length);
+                
+                // Trigger calculation
+                calculateTotals();
+            });
+        });
+        
+        // Calculate totals when orders textarea changes
+        ordersTextarea.addEventListener('input', calculateTotals);
+        
+        // Initial calculation
+        calculateTotals();
+        
+        function calculateTotals() {
+            const lines = ordersTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+            let totalOrders = lines.length;
+            let totalQuantity = 0;
+            let totalAmount = 0;
             
-            // Update link count display
-            linkCountSpan.textContent = linkCount;
-            quantityPerLinkSpan.textContent = quantity.toLocaleString();
+            // Create a map of service prices
+            const servicePrices = new Map();
+            serviceRows.forEach(row => {
+                const serviceId = row.dataset.id;
+                const priceText = row.querySelector('td:last-child').textContent.trim().replace('$', '');
+                const price = parseFloat(priceText);
+                servicePrices.set(serviceId, price);
+            });
             
-            // Calculate total cost
-            const totalCost = (pricePerThousand * quantity * linkCount) / 1000;
-            const remainingBalance = currentBalance - totalCost;
+            // Process each line
+            lines.forEach(line => {
+                const parts = line.split('|');
+                if (parts.length >= 3) {
+                    const serviceId = parts[0].trim();
+                    const quantity = parseInt(parts[2].trim()) || 0;
+                    
+                    totalQuantity += quantity;
+                    
+                    // Calculate cost if service price is available
+                    if (servicePrices.has(serviceId)) {
+                        const price = servicePrices.get(serviceId);
+                        const cost = (quantity * price) / 1000;
+                        totalAmount += cost;
+                    }
+                }
+            });
             
             // Update display
-            totalAmountSpan.textContent = totalCost.toFixed(2);
-            remainingBalanceSpan.textContent = remainingBalance.toFixed(2);
+            totalOrdersElement.textContent = totalOrders.toLocaleString();
+            totalQuantityElement.textContent = totalQuantity.toLocaleString();
+            totalAmountElement.textContent = '$' + totalAmount.toFixed(2);
+            
+            // Calculate remaining balance
+            const remainingBalance = currentBalance - totalAmount;
+            remainingBalanceElement.textContent = '$' + remainingBalance.toFixed(2);
             
             // Update remaining balance color based on value
-            remainingBalanceSpan.parentElement.className = remainingBalance < 0 ? 'text-danger' : 'text-primary';
+            remainingBalanceElement.className = remainingBalance < 0 ? 'fw-bold text-danger' : 'fw-bold text-primary';
             
-            // Disable submit button if remaining balance is negative or no links
-            submitButton.disabled = remainingBalance < 0 || linkCount === 0;
+            // Disable submit button if remaining balance is negative or no orders
+            submitButton.disabled = remainingBalance < 0 || totalOrders === 0;
             
             if (remainingBalance < 0) {
                 submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Insufficient Balance';
-            } else if (linkCount === 0) {
-                submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Add Links First';
+                submitButton.classList.remove('btn-primary');
+                submitButton.classList.add('btn-danger');
+            } else if (totalOrders === 0) {
+                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Place Mass Order';
+                submitButton.classList.remove('btn-danger');
+                submitButton.classList.add('btn-primary');
             } else {
-                submitButton.innerHTML = '<i class="fas fa-shopping-cart me-2"></i> Place Mass Order';
+                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Place Mass Order';
+                submitButton.classList.remove('btn-danger');
+                submitButton.classList.add('btn-primary');
+            }
+            
+            // Check if orders would exceed daily limit
+            if (dailyOrderLimit > 0 && totalOrders + usedOrdersToday > dailyOrderLimit) {
+                const exceedBy = totalOrders + usedOrdersToday - dailyOrderLimit;
+                const warningElement = document.getElementById('dailyLimitWarning');
+                
+                if (!warningElement) {
+                    const warning = document.createElement('div');
+                    warning.id = 'dailyLimitWarning';
+                    warning.className = 'alert alert-warning mt-3';
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Warning: These orders will exceed your daily limit by <strong>${exceedBy}</strong> orders.`;
+                    submitButton.parentNode.appendChild(warning);
+                } else {
+                    warningElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Warning: These orders will exceed your daily limit by <strong>${exceedBy}</strong> orders.`;
+                }
+            } else {
+                const warningElement = document.getElementById('dailyLimitWarning');
+                if (warningElement) {
+                    warningElement.remove();
+                }
             }
         }
-
-        // Calculate on input change
-        linksTextarea.addEventListener('input', calculateTotal);
-        quantityInput.addEventListener('input', calculateTotal);
         
-        // Initial calculation
-        calculateTotal();
-
         // Form submission validation
-        orderForm.addEventListener('submit', function(event) {
-            // Count non-empty links
-            const links = linksTextarea.value.split('\n').filter(link => link.trim() !== '');
-            const linkCount = links.length;
+        massOrderForm.addEventListener('submit', function(event) {
+            const lines = ordersTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
             
-            // Check if adding these links would exceed the daily limit
-            if (linkCount > remainingOrdersToday) {
-                event.preventDefault(); // Stop form submission
-                
-                // Calculate how many links need to be removed
-                const excessLinks = linkCount - remainingOrdersToday;
-                
-                // Show warning popup
+            if (lines.length === 0) {
+                event.preventDefault();
                 Swal.fire({
-                    title: 'Daily Order Limit Would Be Exceeded!',
-                    html: `<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>
-                          <p>You're trying to place <strong>${linkCount}</strong> orders, but you only have <strong>${remainingOrdersToday}</strong> orders remaining today.</p>
-                          <p>Please remove at least <strong>${excessLinks}</strong> link${excessLinks > 1 ? 's' : ''} to continue.</p>
-                          <div class="alert alert-info mt-3">
-                            <i class="fas fa-info-circle me-2"></i> Your daily limit is ${dailyOrderLimit} orders per day.
-                          </div>`,
+                    title: 'No Orders',
+                    text: 'Please enter at least one order.',
                     icon: 'error',
-                    confirmButtonText: 'I Understand',
-                    confirmButtonColor: '#dc3545',
+                    confirmButtonColor: '#dc3545'
+                });
+                return false;
+            }
+            
+            // Check if any line has invalid format
+            let hasInvalidFormat = false;
+            let invalidLines = [];
+            
+            lines.forEach((line, index) => {
+                const parts = line.split('|');
+                if (parts.length < 3) {
+                    hasInvalidFormat = true;
+                    invalidLines.push(`Line ${index + 1}: ${line}`);
+                }
+            });
+            
+            if (hasInvalidFormat) {
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Invalid Format',
+                    html: 'The following lines have invalid format:<br><br>' +
+                          '<code>' + invalidLines.join('<br>') + '</code><br><br>' +
+                          'Please use the format: <code>service_id|link|quantity</code>',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+                return false;
+            }
+            
+            // Calculate total amount
+            const totalAmountText = totalAmountElement.textContent.replace('$', '');
+            const totalAmount = parseFloat(totalAmountText);
+            
+            // Check if user has sufficient balance
+            if (totalAmount > currentBalance) {
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Insufficient Balance',
+                    html: `You need <strong>$${totalAmount.toFixed(2)}</strong> but your current balance is <strong>$${currentBalance.toFixed(2)}</strong>.<br><br>Please add funds to your account.`,
+                    icon: 'error',
+                    confirmButtonText: 'Add Funds',
+                    confirmButtonColor: '#4e73df',
                     showCancelButton: true,
-                    cancelButtonText: 'Edit My Order',
-                    cancelButtonColor: '#6c757d',
-                    focusCancel: true
+                    cancelButtonText: 'Cancel',
+                    cancelButtonColor: '#6c757d'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // User clicked "I Understand" - do nothing, let them edit
-                    } else {
-                        // Focus on the textarea to help them edit
-                        linksTextarea.focus();
+                        window.location.href = '{{ route("funds.add") }}';
                     }
                 });
+                return false;
+            }
+            
+            // Check if total orders would exceed daily limit
+            if (dailyOrderLimit > 0 && lines.length + usedOrdersToday > dailyOrderLimit) {
+                event.preventDefault();
+                const exceedBy = lines.length + usedOrdersToday - dailyOrderLimit;
                 
-                // Highlight the textarea to indicate it needs attention
-                linksTextarea.classList.add('is-invalid');
-                
-                // Return false to prevent form submission
+                Swal.fire({
+                    title: 'Daily Order Limit Warning',
+                    html: `These orders will exceed your daily limit by <strong>${exceedBy}</strong> orders.<br><br>Do you want to proceed anyway?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Proceed',
+                    confirmButtonColor: '#ffc107',
+                    cancelButtonText: 'Cancel',
+                    cancelButtonColor: '#6c757d'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Submit the form
+                        massOrderForm.submit();
+                    }
+                });
                 return false;
             }
             

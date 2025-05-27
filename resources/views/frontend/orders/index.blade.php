@@ -8,28 +8,36 @@
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999" id="toastContainer"></div>
     
     @php
-        $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
-        $orderLimitPercentage = (1 - ($remainingOrders / auth()->user()->daily_order_limit)) * 100;
+        $dailyOrderLimit = auth()->user()->daily_order_limit > 0 ? auth()->user()->daily_order_limit : 100;
+        $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+        $remainingOrders = $dailyOrderLimit - $todayOrderCount;
+        $orderLimitPercentage = ($dailyOrderLimit > 0) ? (1 - ($remainingOrders / $dailyOrderLimit)) * 100 : 0;
     @endphp
     
-    @if($remainingOrders <= 0)
-    <div class="alert alert-danger mb-4">
+    @if($remainingOrders <= 0 && $dailyOrderLimit > 0)
+    <div class="alert alert-danger mb-4 shadow-sm border-0 rounded-3">
         <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-circle fa-2x me-3"></i>
+            </div>
             <div class="flex-grow-1">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>Daily Order Limit Reached!</h5>
-                <p class="mb-0">You've used all of your {{ auth()->user()->daily_order_limit }} orders for today. Your limit will reset tomorrow.</p>
+                <h5 class="alert-heading">Daily Order Limit Reached!</h5>
+                <p class="mb-0">You've used all of your {{ $dailyOrderLimit }} orders for today. Your limit will reset tomorrow.</p>
             </div>
             <div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </div>
     </div>
-    @elseif($remainingOrders <= 2)
-    <div class="alert alert-warning mb-4">
+    @elseif($remainingOrders <= 2 && $dailyOrderLimit > 0)
+    <div class="alert alert-warning mb-4 shadow-sm border-0 rounded-3">
         <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+            </div>
             <div class="flex-grow-1">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Almost at Daily Limit!</h5>
-                <p class="mb-0">You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>
+                <h5 class="alert-heading">Almost at Daily Limit!</h5>
+                <p class="mb-0">You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ $dailyOrderLimit }}.</p>
             </div>
             <div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -42,73 +50,100 @@
     @endif
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">Orders</h4>
         <div>
-            <a href="{{ route('services') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> New Order
+            <h4 class="mb-0 fw-bold text-primary">My Orders</h4>
+            <p class="text-muted mb-0">Manage and track your orders</p>
+        </div>
+        <div>
+            <a href="{{ route('services') }}" class="btn btn-primary rounded-pill shadow-sm">
+                <i class="fas fa-plus me-2"></i> New Order
             </a>
         </div>
     </div>
 
     <!-- Order Stats -->
-    <div class="row mb-4">
-        <div class="col-md">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h6>Total Orders</h6>
-                    <h3>{{ $stats['total'] }}</h3>
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-shopping-cart text-primary fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Total Orders</h6>
+                    <h3 class="fw-bold">{{ $stats['total'] }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h6>Pending</h6>
-                    <h3>{{ $stats['pending'] }}</h3>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-clock text-warning fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Pending</h6>
+                    <h3 class="fw-bold">{{ $stats['pending'] }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h6>Processing</h6>
-                    <h3>{{ $stats['processing'] }}</h3>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-spinner text-info fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Processing</h6>
+                    <h3 class="fw-bold">{{ $stats['processing'] }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6>Completed</h6>
-                    <h3>{{ $stats['completed'] }}</h3>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-check-circle text-success fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Completed</h6>
+                    <h3 class="fw-bold">{{ $stats['completed'] }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <h6>Cancelled</h6>
-                    <h3>{{ $stats['cancelled'] }}</h3>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-times-circle text-danger fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Cancelled</h6>
+                    <h3 class="fw-bold">{{ $stats['cancelled'] }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="card bg-secondary text-white">
-                <div class="card-body">
-                    <h6>Daily Limit</h6>
-                    <h3>{{ \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }} / {{ auth()->user()->daily_order_limit }}</h3>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-body d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-secondary bg-opacity-10 p-3 mb-2">
+                        <i class="fas fa-calendar-day text-secondary fa-2x"></i>
+                    </div>
+                    <h6 class="text-muted mb-1">Daily Limit</h6>
+                    <h3 class="fw-bold">
+                        @php
+                            $dailyOrderLimit = auth()->user()->daily_order_limit;
+                            $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+                        @endphp
+                        {{ $todayOrderCount }} @if($dailyOrderLimit > 0) / {{ $dailyOrderLimit }} @else <small>(unlimited)</small> @endif
+                    </h3>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body">
             <form action="{{ route('orders.index') }}" method="GET" class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select" onchange="this.form.submit()">
+                    <label class="form-label fw-medium">Status</label>
+                    <select name="status" class="form-select rounded-pill" onchange="this.form.submit()">
                         <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Status</option>
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Processing</option>
@@ -117,12 +152,16 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="Search by ID, link or description...">
+                    <label class="form-label fw-medium">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" value="{{ request('search') }}" placeholder="Search by ID, link or description...">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Sort By</label>
-                    <select name="sort" class="form-select" onchange="this.form.submit()">
+                    <label class="form-label fw-medium">Sort By</label>
+                    <select name="sort" class="form-select rounded-pill" onchange="this.form.submit()">
                         <option value="created_at" {{ request('sort', 'created_at') == 'created_at' ? 'selected' : '' }}>Date</option>
                         <option value="total_amount" {{ request('sort') == 'total_amount' ? 'selected' : '' }}>Amount</option>
                         <option value="quantity" {{ request('sort') == 'quantity' ? 'selected' : '' }}>Quantity</option>
@@ -133,16 +172,15 @@
     </div>
 
     <!-- Orders Table -->
-    <div class="card">
+    <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
                             <th>ID</th>
                             <th>Service</th>
                             <th>Link</th>
-                            <th>Start Count</th>
                             <th>Quantity</th>
                             <th>Status</th>
                             <th>Progress</th>
@@ -153,12 +191,18 @@
                     <tbody>
                         @forelse($orders as $order)
                         <tr>
-                            <td>#{{ $order->id }}</td>
-                            <td>{{ $order->service->name }}</td>
+                            <td><span class="badge bg-light text-dark">#{{ $order->id }}</span></td>
+                            <td>
+                                <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $order->service->name }}">
+                                    {{ $order->service->name }}
+                                </span>
+                            </td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-primary">
-                                        {{ Str::limit($order->link, 30) }}
+                                    <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-primary text-decoration-none">
+                                        <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $order->link }}">
+                                            {{ $order->link }}
+                                        </span>
                                         <i class="fas fa-external-link-alt ms-1 small"></i>
                                     </a>
                                     <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link }}')">
@@ -166,27 +210,15 @@
                                     </button>
                                 </div>
                             </td>
-                            <td>{{ number_format($order->start_count) }}</td>
                             <td>{{ number_format($order->quantity) }}</td>
                             <td>
-                                @if($order->status === 'pending')
-                                    <select class="form-select form-select-sm status-select" 
-                                            data-order-id="{{ $order->id }}"
-                                            data-original-status="{{ $order->status }}">
-                                        <option value="pending" selected>Pending</option>
-                                        <option value="cancelled">Cancelled</option>
-                                    </select>
-                                @elseif($order->status === 'processing')
-                                    <span class="badge bg-info">Processing</span>
-                                @else
-                                    <span class="badge bg-{{ 
-                                        $order->status === 'completed' ? 'success' : 
-                                        ($order->status === 'processing' ? 'info' : 
-                                        ($order->status === 'cancelled' ? 'danger' : 'warning')) 
-                                    }}">
-                                        {{ ucfirst($order->status) }}
-                                    </span>
-                                @endif
+                                <span class="badge rounded-pill px-3 py-2 bg-{{ 
+                                    $order->status === 'completed' ? 'success' : 
+                                    ($order->status === 'processing' ? 'info' : 
+                                    ($order->status === 'cancelled' ? 'danger' : 'warning')) 
+                                }}">
+                                    {{ ucfirst($order->status) }}
+                                </span>
                             </td>
                             <td>
                                 @if($order->quantity !== null)
@@ -195,7 +227,7 @@
                                         $percentage = ($completed / $order->quantity) * 100;
                                     @endphp
                                     <div class="d-flex align-items-center">
-                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress flex-grow-1" style="height: 8px; border-radius: 4px;">
                                             <div class="progress-bar bg-{{ 
                                                 $order->status === 'completed' ? 'success' : 
                                                 ($order->status === 'processing' ? 'info' : 'warning') 
@@ -207,7 +239,7 @@
                                             aria-valuemax="100">
                                             </div>
                                         </div>
-                                        <span class="ms-2 small">
+                                        <span class="ms-2 small text-muted">
                                             {{ number_format($completed) }}/{{ number_format($order->quantity) }}
                                         </span>
                                     </div>
@@ -215,23 +247,41 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td>{{ $order->created_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}</td>
                             <td>
-                                <a href="{{ route('orders.show', $order) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                                <span title="{{ $order->created_at->format('Y-m-d H:i:s') }}">
+                                    {{ $order->created_at->diffForHumans() }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('orders.show', $order) }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                        <i class="fas fa-eye"></i> Details
+                                    </a>
+                                    @if($order->status === 'pending')
+                                    <a href="{{ route('orders.edit', $order) }}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center">No orders found</td>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                    <h5>No orders found</h5>
+                                    <p class="text-muted">Try adjusting your search or filter criteria</p>
+                                    <a href="{{ route('services') }}" class="btn btn-primary mt-2">Create New Order</a>
+                                </div>
+                            </td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
 
-            <div class="d-flex justify-content-end">
+            <div class="d-flex justify-content-end mt-4">
                 {{ $orders->links() }}
             </div>
         </div>
@@ -243,19 +293,28 @@
 <style>
 .progress {
     background-color: rgba(0,0,0,0.05);
-    border-radius: 3px;
+    border-radius: 10px;
 }
 .badge {
-    padding: 0.5em 0.75em;
+    font-weight: 500;
 }
-.status-select {
-    min-width: 130px;
-    font-size: 0.875rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
+.table th {
+    font-weight: 600;
+    color: #555;
 }
-.status-select option {
-    padding: 8px;
+.table td {
+    vertical-align: middle;
+    padding: 0.75rem 1rem;
+}
+.pagination {
+    --bs-pagination-active-bg: #4e73df;
+    --bs-pagination-active-border-color: #4e73df;
+}
+.card {
+    transition: all 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-2px);
 }
 </style>
 @endpush
@@ -272,26 +331,28 @@ $(document).ready(function() {
 
     // Daily Order Limit Notification
     @php
-        $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
-        $usedOrders = auth()->user()->daily_order_limit - $remainingOrders;
-        $orderLimitPercentage = ($usedOrders / auth()->user()->daily_order_limit) * 100;
+        $dailyOrderLimit = auth()->user()->daily_order_limit > 0 ? auth()->user()->daily_order_limit : 100;
+        $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+        $remainingOrders = $dailyOrderLimit - $todayOrderCount;
+        $usedOrders = $todayOrderCount;
+        $orderLimitPercentage = ($dailyOrderLimit > 0) ? ($usedOrders / $dailyOrderLimit) * 100 : 0;
     @endphp
     
-    @if($remainingOrders <= 0)
+    @if($remainingOrders <= 0 && $dailyOrderLimit > 0)
         Swal.fire({
             title: 'Daily Order Limit Reached!',
             html: '<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>' +
-                  '<p>You\'ve used all of your {{ auth()->user()->daily_order_limit }} orders for today.</p>' +
+                  '<p>You\'ve used all of your {{ $dailyOrderLimit }} orders for today.</p>' +
                   '<p>Your limit will reset tomorrow.</p>',
             icon: 'error',
             confirmButtonText: 'Got it',
             confirmButtonColor: '#dc3545'
         });
-    @elseif($remainingOrders <= 2)
+    @elseif($remainingOrders <= 2 && $dailyOrderLimit > 0)
         Swal.fire({
             title: 'Almost at Daily Limit!',
             html: '<div class="text-center mb-3"><i class="fas fa-exclamation-triangle text-warning fa-4x"></i></div>' +
-                  '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>' +
+                  '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ $dailyOrderLimit }}.</p>' +
                   '<div class="progress mt-3" style="height: 10px;">' +
                   '  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>' +
                   '</div>',
@@ -303,6 +364,27 @@ $(document).ready(function() {
 
     // Function to copy text to clipboard
     window.copyToClipboard = function(text) {
+        // Fallback for older browsers
+        if (!navigator.clipboard) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";  // Avoid scrolling to bottom
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                var successful = document.execCommand('copy');
+                var msg = successful ? 'Copied to clipboard!' : 'Failed to copy text';
+                showToast(msg, successful ? 'success' : 'danger');
+            } catch (err) {
+                showToast('Failed to copy text', 'danger');
+            }
+
+            document.body.removeChild(textArea);
+            return;
+        }
+
         navigator.clipboard.writeText(text).then(() => {
             // Show toast notification
             showToast('Copied to clipboard!', 'success');
@@ -348,133 +430,7 @@ $(document).ready(function() {
         });
     }
 
-    // Handle status changes
-    $('.status-select').on('change', function(e) {
-        e.preventDefault();
-        const select = $(this);
-        const orderId = select.data('order-id');
-        const newStatus = select.val();
-        const originalStatus = select.data('original-status');
-
-        // Skip if status hasn't changed
-        if (newStatus === originalStatus) {
-            return;
-        }
-
-        console.log('Status change initiated:', {
-            orderId: orderId,
-            newStatus: newStatus,
-            originalStatus: originalStatus
-        });
-
-        let confirmMessage = '';
-        let confirmButtonColor = '';
-        
-        if (newStatus === 'cancelled') {
-            confirmMessage = 'Are you sure you want to cancel this order? This action cannot be undone.';
-            confirmButtonColor = '#dc3545'; // danger red
-        } else {
-            confirmMessage = `Are you sure you want to change the order status to ${newStatus}?`;
-            confirmButtonColor = '#3085d6'; // primary blue
-        }
-
-        // Show confirmation dialog
-        Swal.fire({
-            title: newStatus === 'cancelled' ? 'Cancel Order' : 'Change Order Status',
-            text: confirmMessage,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: confirmButtonColor,
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: newStatus === 'cancelled' ? 'Yes, cancel it!' : 'Yes, change it!',
-            cancelButtonText: 'No, keep it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Show loading state
-                select.prop('disabled', true);
-                Swal.fire({
-                    title: 'Processing...',
-                    text: 'Please wait while we update the order status',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Make the AJAX request
-                $.ajax({
-                    url: "{{ url('orders') }}/" + orderId + "/status",
-                    type: 'POST',
-                    data: {
-                        status: newStatus,
-                        _token: $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(response) {
-                        console.log('Response received:', response);
-                        if (response.success) {
-                            // Close SweetAlert
-                            Swal.close();
-                            
-                            // Show success toast
-                            let successMessage = newStatus === 'cancelled' 
-                                ? 'Order has been cancelled successfully' 
-                                : 'Order status has been updated successfully';
-                            
-                            showToast(successMessage, 'success');
-                            
-                            // Reload the page after a short delay
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            throw new Error(response.error || 'Failed to update status');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error details:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-
-                        // Reset select
-                        select.prop('disabled', false);
-                        select.val(originalStatus);
-
-                        // Close SweetAlert
-                        Swal.close();
-
-                        // Parse error message
-                        let errorMessage = 'Failed to update order status';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMessage = response.error || errorMessage;
-                        } catch (e) {
-                            console.error('Failed to parse error response:', e);
-                        }
-
-                        // Show error toast
-                        showToast(errorMessage, 'danger');
-                    }
-                });
-            } else {
-                // Reset to original status if user cancels
-                select.val(originalStatus);
-            }
-        });
-    });
-
-    // Store original status when page loads
-    $('.status-select').each(function() {
-        const currentStatus = $(this).val();
-        $(this).data('original-status', currentStatus);
-        console.log('Stored original status:', {
-            orderId: $(this).data('order-id'),
-            status: currentStatus
-        });
-    });
+    // Status update functionality removed
 });
 </script>
 @endpush 

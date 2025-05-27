@@ -132,6 +132,7 @@
                             <th>Max Profile Limit</th>
                             <th>Max Order Limit</th>
                             <th>Min Order Limit</th>
+                            <th>Auto Shutdown</th>
                             <th>Status</th>
                             <th>Last Verified At</th>
                             <th>Actions</th>
@@ -147,6 +148,17 @@
                             <td>{{ $profile->max_profile_limit }}</td>
                             <td>{{ $profile->max_order_limit }}</td>
                             <td>{{ $profile->min_order_limit }}</td>
+                            <td>
+                                <form action="{{ route('admin.pc-profiles.update', $profile->id) }}" method="POST" class="auto-shutdown-form">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="auto_shutdown" value="{{ $profile->auto_shutdown ? '0' : '1' }}">
+                                    <button type="submit" class="btn btn-sm {{ $profile->auto_shutdown ? 'btn-success' : 'btn-secondary' }}" title="{{ $profile->auto_shutdown ? 'Auto shutdown enabled' : 'Auto shutdown disabled' }}">
+                                        <i class="fas fa-power-off"></i>
+                                        {{ $profile->auto_shutdown ? 'On' : 'Off' }}
+                                    </button>
+                                </form>
+                            </td>
                             <td>
                                 <span class="badge bg-{{
                                     $profile->status == 'active' ? 'success' :
@@ -186,7 +198,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center">No PC profiles found.</td>
+                            <td colspan="11" class="text-center">No PC profiles found.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -306,3 +318,63 @@
 }
 </style>
 @endsection 
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Handle auto shutdown toggle forms with AJAX
+    $('.auto-shutdown-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const button = form.find('button');
+        const isCurrentlyEnabled = button.hasClass('btn-success');
+        
+        // Show loading state
+        button.prop('disabled', true);
+        button.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Toggle button appearance
+                    if (isCurrentlyEnabled) {
+                        button.removeClass('btn-success').addClass('btn-secondary');
+                        button.html('<i class="fas fa-power-off"></i> Off');
+                        button.attr('title', 'Auto shutdown disabled');
+                    } else {
+                        button.removeClass('btn-secondary').addClass('btn-success');
+                        button.html('<i class="fas fa-power-off"></i> On');
+                        button.attr('title', 'Auto shutdown enabled');
+                    }
+                    
+                    // Toggle the hidden input value for next submission
+                    const currentValue = form.find('input[name="auto_shutdown"]').val();
+                    form.find('input[name="auto_shutdown"]').val(currentValue === '1' ? '0' : '1');
+                    
+                    // Show success message
+                    toastr.success('Auto shutdown setting updated successfully');
+                } else {
+                    toastr.error('Failed to update auto shutdown setting');
+                    
+                    // Reset button to original state
+                    button.html('<i class="fas fa-power-off"></i> ' + (isCurrentlyEnabled ? 'On' : 'Off'));
+                }
+            },
+            error: function() {
+                toastr.error('An error occurred while updating auto shutdown setting');
+                
+                // Reset button to original state
+                button.html('<i class="fas fa-power-off"></i> ' + (isCurrentlyEnabled ? 'On' : 'Off'));
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+@endpush 
