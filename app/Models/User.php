@@ -24,6 +24,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'balance',
+        'custom_rate',
+        'daily_order_limit',
         'status',
     ];
 
@@ -45,6 +48,9 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'balance' => 'decimal:2',
+        'custom_rate' => 'decimal:4',
+        'daily_order_limit' => 'integer',
     ];
 
     /**

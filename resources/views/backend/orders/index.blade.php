@@ -53,6 +53,17 @@
         outline: 0;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
+    
+    /* Toast Notification */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+    .toast {
+        min-width: 250px;
+    }
 </style>
 @endsection
 
@@ -67,6 +78,9 @@
         </div>
     </div>
 
+    <!-- Toast Notifications Container -->
+    <div class="toast-container"></div>
+    
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
@@ -228,9 +242,11 @@
                                 <input type="checkbox" class="form-check-input" id="selectAll">
                             </th>
                             <th>Order ID</th>
+                            <th>User</th>
                             <th>Link</th>
                             <th>UID</th>
                             <th>Quantity</th>
+                            <th>Applied Rate</th>
                             <th>Start Count</th>
                             <th>Remains</th>
                             <th>Status</th>
@@ -245,6 +261,15 @@
                                 </td>
                                 <td><code>{{ $order->id }}</code></td>
                                 <td>
+                                    @if($order->user)
+                                        <a href="{{ route('admin.users.show', $order->user->id) }}" class="text-decoration-none">
+                                            {{ $order->user->name }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Unknown</span>
+                                    @endif
+                                </td>
+                                <td>
                                     <div class="text-truncate" style="max-width: 200px;">
                                         <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
                                             <code class="small">{{ $order->link }}</code>
@@ -257,16 +282,60 @@
                                 </td>
                                 <td>
                                     @if($order->link_uid)
-                                        <code>{{ $order->link_uid }}</code>
-                                        <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link_uid }}')">
-                                            <i class="fas fa-copy"></i>
-                                        </button>
+                                        <div class="input-group input-group-sm" style="max-width: 200px;">
+                                            <form action="{{ route('admin.orders.update-uid', $order) }}" method="POST" class="d-flex w-100">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="text" name="link_uid" class="form-control form-control-sm" 
+                                                    value="{{ $order->link_uid }}"
+                                                    title="Edit UID and click save to update"
+                                                    autocomplete="off">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm" title="Save UID">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     @else
-                                        <span class="text-muted">N/A</span>
+                                        <div class="input-group input-group-sm" style="max-width: 200px;">
+                                            <form action="{{ route('admin.orders.update-uid', $order) }}" method="POST" class="d-flex w-100">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="text" name="link_uid" class="form-control form-control-sm" 
+                                                    placeholder="Enter UID"
+                                                    title="Enter UID and click save to update"
+                                                    autocomplete="off">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm" title="Save UID">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     @endif
                                 </td>
                                 <td>{{ number_format($order->quantity ?? 0) }}</td>
-                                <td>{{ number_format($order->start_count ?? 0) }}</td>
+                                <td>
+                                    ${{ number_format($order->price, 4) }}
+                                    @if($order->user && $order->user->custom_rate && $order->price == $order->user->custom_rate)
+                                        <span class="badge bg-info" title="Custom user rate applied instead of standard service rate">Custom</span>
+                                    @else
+                                        <span class="badge bg-secondary" title="Standard service rate">Standard</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="max-width: 120px;">
+                                        <form action="{{ route('admin.orders.update-start-count', $order) }}" method="POST" class="d-flex w-100">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="number" name="start_count" class="form-control form-control-sm"
+                                                value="{{ $order->start_count ?? 0 }}"
+                                                title="Edit start count and click save to update"
+                                                min="0"
+                                                autocomplete="off">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm" title="Save Start Count">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                                 <td>{{ number_format($order->remains ?? 0) }}</td>
                                 <td>
                                     <span class="badge bg-{{ 
@@ -283,11 +352,21 @@
                                        title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    @if($order->status === 'pending')
+                                        <form action="{{ route('admin.orders.update-status', $order) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="processing">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Set to Processing">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center">No orders found</td>
+                                <td colspan="11" class="text-center">No orders found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -343,7 +422,7 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Select All Checkbox Handler
@@ -391,7 +470,130 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Add submit event listeners to all the editable forms
+    setupEditableForms();
+    
+    // Show a success toast if there's a success message
+    if (document.querySelector('.alert-success')) {
+        showToast(document.querySelector('.alert-success').textContent, 'success');
+        // Hide the alert after showing toast
+        setTimeout(() => {
+            document.querySelector('.alert-success').style.display = 'none';
+        }, 500);
+    }
 });
+
+function setupEditableForms() {
+    // Get all UID and Start Count forms
+    const editForms = document.querySelectorAll('form[action*="update-uid"], form[action*="update-start-count"]');
+    
+    editForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const url = this.action;
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const inputField = this.querySelector('input');
+            const originalValue = inputField.value;
+            
+            // Disable button and show loading indicator
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i>';
+                
+                if (data.success) {
+                    // Flash green background briefly
+                    inputField.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        inputField.style.backgroundColor = '';
+                    }, 1000);
+                    
+                    // Show success toast
+                    showToast(data.message || 'Updated successfully', 'success');
+                } else {
+                    // Reset to original value on error
+                    inputField.value = originalValue;
+                    
+                    // Flash red background briefly
+                    inputField.style.backgroundColor = '#f8d7da';
+                    setTimeout(() => {
+                        inputField.style.backgroundColor = '';
+                    }, 1000);
+                    
+                    // Show error toast
+                    showToast(data.message || 'Update failed', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i>';
+                
+                // Reset to original value on error
+                inputField.value = originalValue;
+                
+                // Flash red background briefly
+                inputField.style.backgroundColor = '#f8d7da';
+                setTimeout(() => {
+                    inputField.style.backgroundColor = '';
+                }, 1000);
+                
+                // Show error toast
+                showToast('An error occurred while updating', 'danger');
+            });
+        });
+    });
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.querySelector('.toast-container');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Initialize the Bootstrap toast
+    const bsToast = new bootstrap.Toast(toast, {
+        autohide: true,
+        delay: 3000
+    });
+    
+    bsToast.show();
+    
+    // Remove the toast element after it's hidden
+    toast.addEventListener('hidden.bs.toast', function() {
+        toast.remove();
+    });
+}
 
 function updateBulkActionButton() {
     const checkedCount = document.querySelectorAll('.order-checkbox:checked').length;
@@ -407,7 +609,7 @@ function refreshTable() {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        alert('Copied to clipboard!');
+        showToast('Copied to clipboard!', 'info');
     });
 }
 
@@ -415,7 +617,7 @@ function bulkAction(action) {
     const selectedOrders = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
     
     if (!selectedOrders.length) {
-        alert('Please select at least one order');
+        showToast('Please select at least one order', 'warning');
         return;
     }
 
@@ -446,12 +648,12 @@ function bulkAction(action) {
         if (data.success) {
             window.location.reload();
         } else {
-            alert(data.message || 'An error occurred while updating orders');
+            showToast(data.message || 'An error occurred while updating orders', 'danger');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating orders');
+        showToast('An error occurred while updating orders', 'danger');
     });
 }
 
@@ -471,6 +673,8 @@ function exportToExcel() {
     setTimeout(() => {
         document.body.removeChild(form);
     }, 1000);
+    
+    showToast('Exporting orders to Excel...', 'info');
 }
 </script>
-@endsection 
+@endpush 

@@ -47,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{service}', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::patch('/orders/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
     
     // Mass order routes
     Route::get('/orders/mass-create/{service}', [OrderController::class, 'massCreate'])->name('orders.mass-create');

@@ -54,5 +54,31 @@
             </form>
         </div>
     </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Account Usage Limits</h6>
+        </div>
+        <div class="card-body">
+            <form action="{{ route('admin.settings.system.update') }}" method="POST">
+                @csrf
+                
+                <div class="form-group mb-4">
+                    <label for="facebook_account_daily_use_limit">Facebook Account Daily Use Limit</label>
+                    <input type="number" class="form-control @error('facebook_account_daily_use_limit') is-invalid @enderror" 
+                           id="facebook_account_daily_use_limit" name="facebook_account_daily_use_limit" 
+                           value="{{ $settings['facebook_account_daily_use_limit'] ?? 4 }}" min="1" max="100">
+                    @error('facebook_account_daily_use_limit')
+                    <div class="invalid-feedback">
+                        {{ $message }}
+                    </div>
+                    @enderror
+                    <small class="form-text text-muted">Maximum number of times a Facebook account can be used per day.</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection 

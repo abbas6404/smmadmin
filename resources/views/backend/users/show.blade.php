@@ -69,6 +69,14 @@
                                 </td>
                             </tr>
                             <tr>
+                                <th>Custom Rate</th>
+                                <td>{{ $user->custom_rate ? number_format($user->custom_rate, 4) : 'Default' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Daily Order Limit</th>
+                                <td>{{ $user->daily_order_limit }}</td>
+                            </tr>
+                            <tr>
                                 <th>Created At</th>
                                 <td>{{ $user->created_at->format('M d, Y H:i:s') }}</td>
                             </tr>

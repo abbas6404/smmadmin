@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->decimal('balance', 10, 2)->default(0);
+            $table->decimal('custom_rate', 10, 4)->nullable()->default(null);
+            $table->integer('daily_order_limit')->default(5);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('status', ['active', 'inactive', 'banned'])->default('inactive');

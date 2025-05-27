@@ -47,6 +47,8 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'balance' => 'required|numeric|min:0',
+            'custom_rate' => 'nullable|numeric|min:0',
+            'daily_order_limit' => 'required|integer|min:1',
             'status' => 'required|in:active,inactive'
         ]);
 
@@ -74,6 +76,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
+            'custom_rate' => 'nullable|numeric|min:0',
+            'daily_order_limit' => 'required|integer|min:1',
             'status' => 'required|in:active,inactive'
         ]);
 

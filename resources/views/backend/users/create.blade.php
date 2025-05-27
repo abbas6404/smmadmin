@@ -82,6 +82,29 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="custom_rate">Custom Rate</label>
+                            <input type="number" step="0.0001" class="form-control @error('custom_rate') is-invalid @enderror" id="custom_rate" name="custom_rate" value="{{ old('custom_rate') }}">
+                            <small class="form-text text-muted">Optional. Leave blank for default system rate.</small>
+                            @error('custom_rate')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="daily_order_limit">Daily Order Limit</label>
+                            <input type="number" class="form-control @error('daily_order_limit') is-invalid @enderror" id="daily_order_limit" name="daily_order_limit" value="{{ old('daily_order_limit', 5) }}" required>
+                            <small class="form-text text-muted">Maximum number of orders a user can place per day. Default is 5.</small>
+                            @error('daily_order_limit')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group mt-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Create User

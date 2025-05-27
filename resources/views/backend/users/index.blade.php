@@ -62,6 +62,8 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Balance</th>
+                            <th>Custom Rate</th>
+                            <th>Order Limit</th>
                             <th>Status</th>
                             <th>Created At</th>
                             <th>Actions</th>
@@ -74,6 +76,8 @@
                                 <td>{{ $user->name }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>${{ number_format($user->balance, 2) }}</td>
+                                <td>{{ $user->custom_rate ? number_format($user->custom_rate, 4) : 'Default' }}</td>
+                                <td>{{ $user->daily_order_limit }}</td>
                                 <td>
                                     @if($user->status)
                                         @if($user->status === 'active')
@@ -118,7 +122,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center">No users found.</td>
+                                <td colspan="9" class="text-center">No users found.</td>
                             </tr>
                         @endforelse
                     </tbody>

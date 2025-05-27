@@ -45,6 +45,8 @@ class SettingsSeeder extends Seeder
             'instagram_url' => '',
             'youtube_url' => '',
 
+            // Account Limits
+            'facebook_account_daily_use_limit' => 4,
             // Terms and Privacy
             'terms_content' => 'Your terms and conditions content here.',
             'privacy_content' => 'Your privacy policy content here.',

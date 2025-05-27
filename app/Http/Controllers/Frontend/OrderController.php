@@ -40,7 +40,7 @@ class OrderController extends Controller
         $direction = $request->direction ?? 'desc';
         $query->orderBy($sort, $direction);
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(100)->withQueryString();
 
         $stats = [
             'total' => Order::where('user_id', $userId)->count(),
@@ -106,10 +106,22 @@ class OrderController extends Controller
             $userId = Auth::id();
             $user = User::find($userId);
 
+            // Determine the price to use (custom rate or service price)
+            $price = $user->custom_rate ?? $service->price;
+
             // Check if user has sufficient balance
-            $totalAmount = ($service->price * $request->quantity) / 1000;
+            $totalAmount = ($price * $request->quantity) / 1000;
             if ($user->balance < $totalAmount) {
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
+            }
+
+            // Check if user has reached their daily order limit
+            $todayOrderCount = Order::where('user_id', $userId)
+                ->whereDate('created_at', now()->toDateString())
+                ->count();
+                
+            if ($todayOrderCount >= $user->daily_order_limit) {
+                return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
             }
 
             // Create the order
@@ -118,7 +130,7 @@ class OrderController extends Controller
                 'service_id' => $service->id,
                 'link' => $request->link,
                 'quantity' => $request->quantity,
-                'price' => $service->price,
+                'price' => $price,
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'description' => $request->description,
@@ -356,15 +368,33 @@ class OrderController extends Controller
 
             DB::beginTransaction();
 
-            // Calculate total amount for all orders
-            $totalAmount = ($service->price * $request->quantity * count($links)) / 1000;
-            
             $userId = Auth::id();
             $user = User::find($userId);
+            
+            // Determine the price to use (custom rate or service price)
+            $price = $user->custom_rate ?? $service->price;
+            
+            // Calculate total amount for all orders
+            $totalAmount = ($price * $request->quantity * count($links)) / 1000;
             
             // Check if user has sufficient balance
             if ($user->balance < $totalAmount) {
                 return back()->with('error', 'Insufficient balance. Please add funds to your account.');
+            }
+
+            // Check if user has reached their daily order limit
+            $todayOrderCount = Order::where('user_id', $userId)
+                ->whereDate('created_at', now()->toDateString())
+                ->count();
+                
+            // Check if adding these new orders would exceed the daily limit
+            if ($todayOrderCount + count($links) > $user->daily_order_limit) {
+                $ordersRemaining = max(0, $user->daily_order_limit - $todayOrderCount);
+                if ($ordersRemaining == 0) {
+                    return back()->with('error', "You've reached your daily order limit of {$user->daily_order_limit} orders. Please try again tomorrow.");
+                } else {
+                    return back()->with('error', "You can only place {$ordersRemaining} more orders today due to your daily limit of {$user->daily_order_limit}.");
+                }
             }
 
             $orders = [];
@@ -379,8 +409,8 @@ class OrderController extends Controller
                     'service_id' => $service->id,
                     'link' => $link,
                     'quantity' => $request->quantity,
-                    'price' => $service->price,
-                    'total_amount' => ($service->price * $request->quantity) / 1000,
+                    'price' => $price,
+                    'total_amount' => ($price * $request->quantity) / 1000,
                     'status' => 'pending',
                     'description' => $request->description,
                     'remains' => ceil($request->quantity * 1.15), // Add 15% more to remains
@@ -452,5 +482,52 @@ class OrderController extends Controller
         }
 
         return view('frontend.orders.mass-details', compact('orders'));
+    }
+
+    public function updateUid(Request $request, Order $order)
+    {
+        try {
+            $userId = Auth::id();
+            // Ensure the order belongs to the authenticated user
+            if ($order->user_id !== $userId) {
+                return response()->json(['error' => 'You are not authorized to update this order'], 403);
+            }
+            
+            // Only allow updating UID for pending orders
+            if ($order->status !== 'pending') {
+                return response()->json(['error' => 'Only pending orders can be updated'], 422);
+            }
+
+            $request->validate([
+                'link_uid' => 'required|string|max:255'
+            ]);
+
+            $order->link_uid = $request->link_uid;
+            $order->save();
+            
+            // Check if it's an AJAX request
+            if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'UID updated successfully',
+                    'order' => $order
+                ]);
+            }
+
+            // Regular request
+            return back()->with('success', 'Order UID updated successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to update UID:', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {
+                return response()->json(['error' => 'Failed to update UID: ' . $e->getMessage()], 500);
+            }
+            
+            return back()->with('error', 'Failed to update UID: ' . $e->getMessage());
+        }
     }
 } 

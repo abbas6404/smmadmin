@@ -4,6 +4,43 @@
 
 @section('content')
 <div class="container-fluid px-4">
+    <!-- Toast Notifications Container -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999" id="toastContainer"></div>
+    
+    @php
+        $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+        $orderLimitPercentage = (1 - ($remainingOrders / auth()->user()->daily_order_limit)) * 100;
+    @endphp
+    
+    @if($remainingOrders <= 0)
+    <div class="alert alert-danger mb-4">
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+                <h5 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>Daily Order Limit Reached!</h5>
+                <p class="mb-0">You've used all of your {{ auth()->user()->daily_order_limit }} orders for today. Your limit will reset tomorrow.</p>
+            </div>
+            <div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    @elseif($remainingOrders <= 2)
+    <div class="alert alert-warning mb-4">
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Almost at Daily Limit!</h5>
+                <p class="mb-0">You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>
+            </div>
+            <div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>
+        </div>
+    </div>
+    @endif
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0">Orders</h4>
         <div>
@@ -52,6 +89,14 @@
                 <div class="card-body">
                     <h6>Cancelled</h6>
                     <h3>{{ $stats['cancelled'] }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h6>Daily Limit</h6>
+                    <h3>{{ \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }} / {{ auth()->user()->daily_order_limit }}</h3>
                 </div>
             </div>
         </div>
@@ -124,17 +169,15 @@
                             <td>{{ number_format($order->start_count) }}</td>
                             <td>{{ number_format($order->quantity) }}</td>
                             <td>
-                                @if(in_array($order->status, ['pending', 'processing']))
+                                @if($order->status === 'pending')
                                     <select class="form-select form-select-sm status-select" 
                                             data-order-id="{{ $order->id }}"
                                             data-original-status="{{ $order->status }}">
-                                        <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="processing" {{ $order->status === 'processing' ? 'selected' : '' }}>Processing</option>
-                                        <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                        @if($order->status === 'pending')
+                                        <option value="pending" selected>Pending</option>
                                         <option value="cancelled">Cancelled</option>
-                                        @endif
                                     </select>
+                                @elseif($order->status === 'processing')
+                                    <span class="badge bg-info">Processing</span>
                                 @else
                                     <span class="badge bg-{{ 
                                         $order->status === 'completed' ? 'success' : 
@@ -172,7 +215,7 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
+                            <td>{{ $order->created_at->timezone(config('app.timezone'))->format('Y-m-d H:i') }}</td>
                             <td>
                                 <a href="{{ route('orders.show', $order) }}" class="btn btn-sm btn-info">
                                     <i class="fas fa-eye"></i>
@@ -227,15 +270,83 @@ $(document).ready(function() {
         }
     });
 
+    // Daily Order Limit Notification
+    @php
+        $remainingOrders = auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
+        $usedOrders = auth()->user()->daily_order_limit - $remainingOrders;
+        $orderLimitPercentage = ($usedOrders / auth()->user()->daily_order_limit) * 100;
+    @endphp
+    
+    @if($remainingOrders <= 0)
+        Swal.fire({
+            title: 'Daily Order Limit Reached!',
+            html: '<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>' +
+                  '<p>You\'ve used all of your {{ auth()->user()->daily_order_limit }} orders for today.</p>' +
+                  '<p>Your limit will reset tomorrow.</p>',
+            icon: 'error',
+            confirmButtonText: 'Got it',
+            confirmButtonColor: '#dc3545'
+        });
+    @elseif($remainingOrders <= 2)
+        Swal.fire({
+            title: 'Almost at Daily Limit!',
+            html: '<div class="text-center mb-3"><i class="fas fa-exclamation-triangle text-warning fa-4x"></i></div>' +
+                  '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ auth()->user()->daily_order_limit }}.</p>' +
+                  '<div class="progress mt-3" style="height: 10px;">' +
+                  '  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>' +
+                  '</div>',
+            icon: 'warning',
+            confirmButtonText: 'Understood',
+            confirmButtonColor: '#ffc107'
+        });
+    @endif
+
     // Function to copy text to clipboard
     window.copyToClipboard = function(text) {
         navigator.clipboard.writeText(text).then(() => {
-            // Show a temporary tooltip or alert
-            alert('Copied to clipboard!');
+            // Show toast notification
+            showToast('Copied to clipboard!', 'success');
         }).catch(err => {
             console.error('Failed to copy text: ', err);
+            showToast('Failed to copy text', 'danger');
         });
     };
+    
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer');
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Initialize the Bootstrap toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
+        
+        bsToast.show();
+        
+        // Remove the toast element after it's hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
 
     // Handle status changes
     $('.status-select').on('change', function(e) {
@@ -245,22 +356,38 @@ $(document).ready(function() {
         const newStatus = select.val();
         const originalStatus = select.data('original-status');
 
+        // Skip if status hasn't changed
+        if (newStatus === originalStatus) {
+            return;
+        }
+
         console.log('Status change initiated:', {
             orderId: orderId,
             newStatus: newStatus,
             originalStatus: originalStatus
         });
 
+        let confirmMessage = '';
+        let confirmButtonColor = '';
+        
+        if (newStatus === 'cancelled') {
+            confirmMessage = 'Are you sure you want to cancel this order? This action cannot be undone.';
+            confirmButtonColor = '#dc3545'; // danger red
+        } else {
+            confirmMessage = `Are you sure you want to change the order status to ${newStatus}?`;
+            confirmButtonColor = '#3085d6'; // primary blue
+        }
+
         // Show confirmation dialog
         Swal.fire({
-            title: 'Change Order Status',
-            text: `Are you sure you want to change the order status to ${newStatus}?`,
+            title: newStatus === 'cancelled' ? 'Cancel Order' : 'Change Order Status',
+            text: confirmMessage,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, change it!',
-            cancelButtonText: 'No, cancel!'
+            confirmButtonColor: confirmButtonColor,
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: newStatus === 'cancelled' ? 'Yes, cancel it!' : 'Yes, change it!',
+            cancelButtonText: 'No, keep it!'
         }).then((result) => {
             if (result.isConfirmed) {
                 // Show loading state
@@ -278,7 +405,7 @@ $(document).ready(function() {
 
                 // Make the AJAX request
                 $.ajax({
-                    url: `/orders/${orderId}/status`,
+                    url: "{{ url('orders') }}/" + orderId + "/status",
                     type: 'POST',
                     data: {
                         status: newStatus,
@@ -287,16 +414,20 @@ $(document).ready(function() {
                     success: function(response) {
                         console.log('Response received:', response);
                         if (response.success) {
-                            // Show success message
-                            Swal.fire({
-                                title: 'Success!',
-                                text: 'Order status has been updated successfully',
-                                icon: 'success',
-                                timer: 1500
-                            }).then(() => {
-                                // Reload the page to update stats
+                            // Close SweetAlert
+                            Swal.close();
+                            
+                            // Show success toast
+                            let successMessage = newStatus === 'cancelled' 
+                                ? 'Order has been cancelled successfully' 
+                                : 'Order status has been updated successfully';
+                            
+                            showToast(successMessage, 'success');
+                            
+                            // Reload the page after a short delay
+                            setTimeout(() => {
                                 window.location.reload();
-                            });
+                            }, 1500);
                         } else {
                             throw new Error(response.error || 'Failed to update status');
                         }
@@ -312,6 +443,9 @@ $(document).ready(function() {
                         select.prop('disabled', false);
                         select.val(originalStatus);
 
+                        // Close SweetAlert
+                        Swal.close();
+
                         // Parse error message
                         let errorMessage = 'Failed to update order status';
                         try {
@@ -321,12 +455,8 @@ $(document).ready(function() {
                             console.error('Failed to parse error response:', e);
                         }
 
-                        // Show error message
-                        Swal.fire({
-                            title: 'Error!',
-                            text: errorMessage,
-                            icon: 'error'
-                        });
+                        // Show error toast
+                        showToast(errorMessage, 'danger');
                     }
                 });
             } else {

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Setting;
 
 class FacebookAccount extends Model
 {
@@ -25,6 +26,7 @@ class FacebookAccount extends Model
         'two_factor_secret',
         'total_count',
         'have_use',
+        'use_count',
         'have_page',
         'have_post',
         'status',
@@ -42,6 +44,7 @@ class FacebookAccount extends Model
     protected $casts = [
         'total_count' => 'integer',
         'have_use' => 'boolean',
+        'use_count' => 'integer',
         'have_page' => 'boolean',
         'have_post' => 'boolean',
         'order_link_uid' => 'json',

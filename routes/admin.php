@@ -39,8 +39,13 @@ Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/orders/bulk-update', [OrderController::class, 'bulkUpdate'])->name('orders.bulk-update');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus']);
     Route::patch('/orders/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
+    Route::post('/orders/{order}/uid', [OrderController::class, 'updateUid']);
     Route::patch('/orders/{order}/link', [OrderController::class, 'updateLink'])->name('orders.update-link');
+    Route::post('/orders/{order}/link', [OrderController::class, 'updateLink']);
+    Route::patch('/orders/{order}/update-start-count', [OrderController::class, 'updateStartCount'])->name('orders.update-start-count');
+    Route::post('/orders/{order}/update-start-count', [OrderController::class, 'updateStartCount']);
     
     // Service Management Routes
     Route::resource('services', ServiceController::class);

@@ -80,9 +80,29 @@
                                     <th>Price:</th>
                                     <td>
                                         @if($order->service)
-                                            ${{ number_format($order->service->price, 4) }} per item
+                                            <div class="mb-1">
+                                                <strong>Service Standard Rate:</strong> 
+                                                ${{ number_format($order->service->price, 4) }} per 1000
+                                            </div>
                                         @else
-                                            $0.0000 per item
+                                            <div class="mb-1">
+                                                <strong>Service Standard Rate:</strong> 
+                                                <span class="text-muted">Unknown (service deleted)</span>
+                                            </div>
+                                        @endif
+                                        <div>
+                                            <strong>Applied Order Rate:</strong> 
+                                            ${{ number_format($order->price, 4) }} per 1000
+                                            @if($order->user && $order->user->custom_rate && $order->price == $order->user->custom_rate)
+                                                <span class="badge bg-info">Custom user rate</span>
+                                            @elseif($order->service && $order->price == $order->service->price)
+                                                <span class="badge bg-secondary">Standard rate</span>
+                                            @endif
+                                        </div>
+                                        @if($order->user && $order->user->custom_rate && $order->price != $order->user->custom_rate)
+                                            <div class="mt-1 text-warning">
+                                                <small><i class="fas fa-exclamation-triangle me-1"></i> User has custom rate (${{ number_format($order->user->custom_rate, 4) }}) but it was not applied to this order</small>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -196,15 +216,53 @@
                             <table class="table table-sm">
                                 <tr>
                                     <th width="35%">Name:</th>
-                                    <td>{{ $order->user ? $order->user->name : 'Deleted User' }}</td>
+                                    <td>
+                                        @if($order->user)
+                                            <a href="{{ route('admin.users.show', $order->user->id) }}" class="text-decoration-none">
+                                                {{ $order->user->name }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">Deleted User</span>
+                                        @endif
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th>Email:</th>
                                     <td>{{ $order->user ? $order->user->email : 'N/A' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Registered:</th>
-                                    <td>{{ $order->user ? $order->user->created_at->format('Y-m-d') : 'N/A' }}</td>
+                                    <th>Custom Rate:</th>
+                                    <td>
+                                        @if($order->user && $order->user->custom_rate)
+                                            <span class="text-success">${{ number_format($order->user->custom_rate, 4) }}</span>
+                                            @if($order->price == $order->user->custom_rate)
+                                                <span class="badge bg-info">Applied to this order</span>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">Not set</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Daily Order Limit:</th>
+                                    <td>
+                                        @if($order->user)
+                                            {{ $order->user->daily_order_limit }} orders/day
+                                            @php
+                                                $todayOrderCount = App\Models\Order::where('user_id', $order->user->id)
+                                                    ->whereDate('created_at', now()->toDateString())
+                                                    ->count();
+                                            @endphp
+                                            <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress-bar {{ $todayOrderCount >= $order->user->daily_order_limit ? 'bg-danger' : 'bg-success' }}" 
+                                                    style="width: {{ min(100, ($todayOrderCount / $order->user->daily_order_limit) * 100) }}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ $todayOrderCount }} used today</small>
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             </table>
                         </div>

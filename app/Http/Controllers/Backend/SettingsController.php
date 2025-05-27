@@ -69,39 +69,37 @@ class SettingsController extends Controller
     public function updateSystemSettings(Request $request)
     {
         $request->validate([
-            'system_notification_message' => 'required|string|max:500',
+            'system_notification_message' => 'nullable|string|max:500',
+            'facebook_account_daily_use_limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         // Debug the incoming request
         \Illuminate\Support\Facades\Log::info('System settings update request:', [
             'has_notification_active' => $request->has('system_notification_active'),
-            'notification_message' => $request->system_notification_message
+            'notification_message' => $request->system_notification_message,
+            'facebook_daily_limit' => $request->facebook_account_daily_use_limit
         ]);
 
-        // Update system notification settings - explicitly convert checkbox to boolean
-        $isActive = $request->has('system_notification_active') ? true : false;
+        // Get all settings that need to be updated
+        $settingsToUpdate = [
+            'system_notification_active' => $request->has('system_notification_active') ? '1' : '0',
+        ];
         
-        // Use the models directly instead of the facade to ensure they work
-        $activeSettings = \App\Models\Setting::where('key', 'system_notification_active')->first();
-        if ($activeSettings) {
-            $activeSettings->value = $isActive ? '1' : '0';
-            $activeSettings->save();
-        } else {
-            \App\Models\Setting::create([
-                'key' => 'system_notification_active',
-                'value' => $isActive ? '1' : '0'
-            ]);
+        // Add conditional settings
+        if ($request->has('system_notification_message')) {
+            $settingsToUpdate['system_notification_message'] = $request->system_notification_message;
         }
         
-        $messageSettings = \App\Models\Setting::where('key', 'system_notification_message')->first();
-        if ($messageSettings) {
-            $messageSettings->value = $request->system_notification_message;
-            $messageSettings->save();
-        } else {
-            \App\Models\Setting::create([
-                'key' => 'system_notification_message',
-                'value' => $request->system_notification_message
-            ]);
+        if ($request->has('facebook_account_daily_use_limit')) {
+            $settingsToUpdate['facebook_account_daily_use_limit'] = $request->facebook_account_daily_use_limit;
+        }
+        
+        // Update all settings
+        foreach ($settingsToUpdate as $key => $value) {
+            \App\Models\Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => $value]
+            );
         }
 
         return back()->with('success', 'System settings updated successfully');

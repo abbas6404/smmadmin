@@ -1,9 +1,9 @@
 @extends('frontend.layouts.master')
 
-@section('title', 'Create Order')
+@section('title', 'Create Mass Order')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             @php
@@ -48,11 +48,11 @@
 
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Create New Order</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Create Mass Order - {{ $service->name }}</h6>
                 </div>
                 <div class="card-body">
                     <div class="service-info mb-4">
-                        <h5 class="mb-3">{{ $service->name }}</h5>
+                        <h5 class="mb-3">Service Details</h5>
                         <div class="row">
                             <div class="col-md-6">
                                 <p class="mb-1">
@@ -79,32 +79,44 @@
                             </div>
                         </div>
                     </div>
-
-                    <form action="{{ route('orders.store', $service) }}" method="POST">
+                    
+                    <form action="{{ route('orders.mass-store', $service) }}" method="POST">
                         @csrf
+                        
                         <div class="mb-3">
-                            <label for="link" class="form-label">Link</label>
-                            <input type="url" class="form-control @error('link') is-invalid @enderror" 
-                                id="link" name="link" 
-                                placeholder="Enter your target link" 
-                                value="{{ old('link') }}" required>
-                            @error('link')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <label for="links" class="form-label">Links (One per line)</label>
+                            <textarea 
+                                name="links" 
+                                id="links" 
+                                rows="5" 
+                                class="form-control @error('links') is-invalid @enderror" 
+                                required
+                                placeholder="https://example.com/link1&#10;https://example.com/link2&#10;https://example.com/link3"
+                            >{{ old('links') }}</textarea>
+                            @error('links')
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <input type="hidden" name="extracted_uid" id="extracted_uid">
+                            <small class="text-muted">Each line represents a separate order with the same quantity</small>
                         </div>
 
                         <div class="mb-3">
-                            <label for="quantity" class="form-label">Quantity</label>
-                            <input type="number" class="form-control @error('quantity') is-invalid @enderror" 
-                                id="quantity" name="quantity" 
-                                min="{{ $service->min_quantity }}" 
-                                max="{{ $service->max_quantity }}" 
-                                value="{{ old('quantity', $service->min_quantity) }}" 
-                                required>
+                            <label for="quantity" class="form-label">Quantity per Link</label>
+                            <input 
+                                type="number" 
+                                name="quantity" 
+                                id="quantity" 
+                                class="form-control @error('quantity') is-invalid @enderror" 
+                                value="{{ old('quantity', $service->min_quantity) }}"
+                                min="{{ $service->min_quantity }}"
+                                max="{{ $service->max_quantity }}"
+                                required
+                            >
                             @error('quantity')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="text-muted">
+                                Min: {{ $service->min_quantity }} - Max: {{ $service->max_quantity }}
+                            </small>
                         </div>
 
                         <div class="mb-4">
@@ -112,8 +124,12 @@
                             <div class="card bg-light">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span>Quantity:</span>
-                                        <span id="summaryQuantity">0</span>
+                                        <span>Number of Links:</span>
+                                        <span id="linkCount">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Quantity per Link:</span>
+                                        <span id="quantityPerLink">{{ $service->min_quantity }}</span>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Price per 1000:</span>
@@ -143,13 +159,22 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="description" class="form-label">Additional Notes (Optional)</label>
-                            <textarea class="form-control" id="description" name="description" rows="3">{{ old('description') }}</textarea>
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea 
+                                name="description" 
+                                id="description" 
+                                rows="2" 
+                                class="form-control @error('description') is-invalid @enderror"
+                                placeholder="Any additional notes..."
+                            >{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary" id="submitButton">
-                                <i class="fas fa-shopping-cart me-2"></i> Place Order
+                                <i class="fas fa-shopping-cart me-2"></i> Place Mass Order
                             </button>
                             <a href="{{ route('services') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left me-2"></i> Back to Services
@@ -197,110 +222,100 @@
             });
         @endif
         
+        const linksTextarea = document.getElementById('links');
         const quantityInput = document.getElementById('quantity');
+        const linkCountSpan = document.getElementById('linkCount');
+        const quantityPerLinkSpan = document.getElementById('quantityPerLink');
         const totalAmountSpan = document.getElementById('totalAmount');
-        const summaryQuantitySpan = document.getElementById('summaryQuantity');
         const remainingBalanceSpan = document.getElementById('remainingBalance');
         const submitButton = document.getElementById('submitButton');
         const currentBalance = {{ auth()->user()->balance }};
         const pricePerThousand = {{ auth()->user()->custom_rate ?? $service->price }};
-        const linkInput = document.getElementById('link');
-        const extractedUidInput = document.getElementById('extracted_uid');
         const dailyOrderLimit = {{ auth()->user()->daily_order_limit }};
         const usedOrdersToday = {{ \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }};
         const remainingOrdersToday = dailyOrderLimit - usedOrdersToday;
         const orderForm = document.querySelector('form');
 
         function calculateTotal() {
+            // Count non-empty lines in the textarea
+            const links = linksTextarea.value.split('\n').filter(link => link.trim() !== '');
+            const linkCount = links.length;
             const quantity = parseInt(quantityInput.value) || 0;
-            const total = (quantity * pricePerThousand) / 1000;
-            const remaining = currentBalance - total;
-
-            totalAmountSpan.textContent = total.toFixed(2);
-            summaryQuantitySpan.textContent = quantity.toLocaleString();
-            remainingBalanceSpan.textContent = remaining.toFixed(2);
-
+            
+            // Update link count display
+            linkCountSpan.textContent = linkCount;
+            quantityPerLinkSpan.textContent = quantity.toLocaleString();
+            
+            // Calculate total cost
+            const totalCost = (pricePerThousand * quantity * linkCount) / 1000;
+            const remainingBalance = currentBalance - totalCost;
+            
+            // Update display
+            totalAmountSpan.textContent = totalCost.toFixed(2);
+            remainingBalanceSpan.textContent = remainingBalance.toFixed(2);
+            
             // Update remaining balance color based on value
-            remainingBalanceSpan.parentElement.className = remaining < 0 ? 'text-danger' : 'text-primary';
-
-            // Disable submit button if remaining balance is negative
-            submitButton.disabled = remaining < 0;
-            if (remaining < 0) {
+            remainingBalanceSpan.parentElement.className = remainingBalance < 0 ? 'text-danger' : 'text-primary';
+            
+            // Disable submit button if remaining balance is negative or no links
+            submitButton.disabled = remainingBalance < 0 || linkCount === 0;
+            
+            if (remainingBalance < 0) {
                 submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Insufficient Balance';
+            } else if (linkCount === 0) {
+                submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Add Links First';
             } else {
-                submitButton.innerHTML = '<i class="fas fa-shopping-cart me-2"></i> Place Order';
+                submitButton.innerHTML = '<i class="fas fa-shopping-cart me-2"></i> Place Mass Order';
             }
         }
 
+        // Calculate on input change
+        linksTextarea.addEventListener('input', calculateTotal);
         quantityInput.addEventListener('input', calculateTotal);
-        calculateTotal(); // Initial calculation
         
-        // Auto Facebook UID Finder functionality
-        let uidExtractionTimeout;
-        
-        linkInput.addEventListener('input', function() {
-            // Clear any existing timeout
-            if (uidExtractionTimeout) {
-                clearTimeout(uidExtractionTimeout);
-            }
-            
-            // Set a new timeout to avoid making requests on every keystroke
-            uidExtractionTimeout = setTimeout(function() {
-                const url = linkInput.value.trim();
-                
-                // Basic validation
-                if (!url) {
-                    return;
-                }
-                
-                // Check if it's a Facebook URL
-                if (!url.includes('facebook.com') && !url.includes('fb.com')) {
-                    return;
-                }
-                
-                // Send AJAX request
-                $.ajax({
-                    url: '{{ route("uid-finder.extract") }}',
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        url: url,
-                        platform: 'facebook'
-                    },
-                    success: function(response) {
-                        // Store the extracted UID in the hidden field
-                        extractedUidInput.value = response.uid;
-                        
-                        // Flash the input to show it's been processed
-                        linkInput.classList.add('is-valid');
-                        setTimeout(function() {
-                            linkInput.classList.remove('is-valid');
-                        }, 2000);
-                    },
-                    error: function(xhr) {
-                        // In case of error, just clear the extracted UID
-                        extractedUidInput.value = '';
-                    }
-                });
-            }, 800); // Wait for 800ms after typing stops
-        });
+        // Initial calculation
+        calculateTotal();
 
         // Form submission validation
         orderForm.addEventListener('submit', function(event) {
-            // Check if user has already reached their daily limit
-            if (remainingOrdersToday <= 0) {
+            // Count non-empty links
+            const links = linksTextarea.value.split('\n').filter(link => link.trim() !== '');
+            const linkCount = links.length;
+            
+            // Check if adding these links would exceed the daily limit
+            if (linkCount > remainingOrdersToday) {
                 event.preventDefault(); // Stop form submission
+                
+                // Calculate how many links need to be removed
+                const excessLinks = linkCount - remainingOrdersToday;
                 
                 // Show warning popup
                 Swal.fire({
-                    title: 'Daily Order Limit Reached!',
+                    title: 'Daily Order Limit Would Be Exceeded!',
                     html: `<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>
-                          <p>You've reached your daily limit of <strong>${dailyOrderLimit}</strong> orders.</p>
-                          <p>Please try again tomorrow when your limit resets.</p>`,
+                          <p>You're trying to place <strong>${linkCount}</strong> orders, but you only have <strong>${remainingOrdersToday}</strong> orders remaining today.</p>
+                          <p>Please remove at least <strong>${excessLinks}</strong> link${excessLinks > 1 ? 's' : ''} to continue.</p>
+                          <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i> Your daily limit is ${dailyOrderLimit} orders per day.
+                          </div>`,
                     icon: 'error',
                     confirmButtonText: 'I Understand',
-                    confirmButtonColor: '#dc3545'
+                    confirmButtonColor: '#dc3545',
+                    showCancelButton: true,
+                    cancelButtonText: 'Edit My Order',
+                    cancelButtonColor: '#6c757d',
+                    focusCancel: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // User clicked "I Understand" - do nothing, let them edit
+                    } else {
+                        // Focus on the textarea to help them edit
+                        linksTextarea.focus();
+                    }
                 });
+                
+                // Highlight the textarea to indicate it needs attention
+                linksTextarea.classList.add('is-invalid');
                 
                 // Return false to prevent form submission
                 return false;

@@ -52,7 +52,7 @@ class OrderController extends Controller
             }
         }
 
-        $orders = $query->orderBy('id', 'desc')->paginate(25)->withQueryString();
+        $orders = $query->orderBy('id', 'desc')->paginate(100)->withQueryString();
 
         // Get statistics
         $statistics = [
@@ -72,7 +72,7 @@ class OrderController extends Controller
         $orders = Order::with(['user', 'service'])
             ->where('status', 'pending')
             ->latest()
-            ->paginate(25);
+            ->paginate(100);
             
         return redirect()->route('admin.orders.index', ['status' => 'pending']);
     }
@@ -107,6 +107,16 @@ class OrderController extends Controller
         
         $order->save();
 
+        // Check if it's an AJAX request
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-HTTP-Method-Override')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully',
+                'order' => $order
+            ]);
+        }
+
+        // Regular request
         return back()->with('success', 'Order status updated successfully');
     }
 
@@ -225,7 +235,17 @@ class OrderController extends Controller
 
         $order->link_uid = $request->link_uid;
         $order->save();
+        
+        // Check if it's an AJAX request
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'UID updated successfully',
+                'order' => $order
+            ]);
+        }
 
+        // Regular request
         return back()->with('success', 'Order UID updated successfully');
     }
 
@@ -239,5 +259,27 @@ class OrderController extends Controller
         $order->save();
 
         return back()->with('success', 'Order link updated successfully');
+    }
+
+    public function updateStartCount(Request $request, Order $order)
+    {
+        $request->validate([
+            'start_count' => 'required|integer|min:0'
+        ]);
+
+        $order->start_count = $request->start_count;
+        $order->save();
+
+        // Check if it's an AJAX request
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-HTTP-Method-Override')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Start count updated successfully',
+                'order' => $order
+            ]);
+        }
+
+        // Regular request
+        return back()->with('success', 'Start count updated successfully');
     }
 } 

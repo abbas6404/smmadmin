@@ -332,6 +332,13 @@
                         <td>{{ $facebook->have_use ? 'Yes' : 'No' }}</td>
                     </tr>
                     <tr>
+                        <th>Daily Use Count</th>
+                        <td>
+                            {{ $facebook->use_count ?? 0 }} / {{ \App\Models\Setting::where('key', 'facebook_account_daily_use_limit')->first()->value ?? 4 }}
+                            <small class="text-muted">(Used {{ $facebook->use_count ?? 0 }} times out of daily limit)</small>
+                        </td>
+                    </tr>
+                    <tr>
                         <th>Have Page</th>
                         <td>{{ $facebook->have_page ? 'Yes' : 'No' }}</td>
                     </tr>

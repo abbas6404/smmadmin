@@ -17,15 +17,22 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: var(--sidebar-width);
-    min-height: 100vh;
+    height: 100vh;
     background: var(--sidebar-bg);
     position: fixed;
     z-index: 100;
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .sidebar.collapsed {
     width: var(--sidebar-collapsed-width);
+}
+
+.sidebar.collapsed .sidebar-content {
+    overflow-x: visible;
 }
 
 .sidebar.collapsed .sidebar-brand h4 span {
@@ -44,10 +51,12 @@ body {
 .sidebar.collapsed .submenu {
     position: absolute;
     left: var(--sidebar-collapsed-width);
-    top: 0;
+    top: auto;
     width: 200px;
     display: none;
     border-radius: 0 4px 4px 0;
+    background: var(--sidebar-bg);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
 }
 
 .sidebar.collapsed .nav-items:hover .submenu {
@@ -143,6 +152,27 @@ body {
 
 .submenu .sidebar-link:hover {
     background: rgba(255,255,255,0.05);
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 10px;
 }
 
 /* Main Content Styles */

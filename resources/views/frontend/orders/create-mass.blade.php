@@ -64,8 +64,16 @@
                         </div>
 
                         <div class="alert alert-info">
-                            <strong>Price per 1000:</strong> ${{ number_format($service->price, 2) }}<br>
-                            <strong>Service Description:</strong> {{ $service->description }}
+                            <strong>Price per 1000:</strong> 
+                            @if(auth()->user()->custom_rate)
+                                <span class="text-success">${{ number_format(auth()->user()->custom_rate, 4) }}</span>
+                                <small class="text-muted">(Custom rate)</small>
+                            @else
+                                ${{ number_format($service->price, 2) }}
+                            @endif
+                            <br>
+                            <strong>Service Description:</strong> {{ $service->description }}<br>
+                            <strong>Daily Order Limit:</strong> {{ auth()->user()->daily_order_limit - \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count() }} of {{ auth()->user()->daily_order_limit }} remaining today
                         </div>
 
                         <div class="d-grid gap-2">

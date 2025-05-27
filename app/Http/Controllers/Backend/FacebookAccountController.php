@@ -137,6 +137,7 @@ class FacebookAccountController extends Controller
             'have_use' => 'boolean',
             'have_page' => 'boolean',
             'have_post' => 'boolean',
+            'use_count' => 'nullable|integer|min:0',
             'note' => 'nullable|string'
         ]);
 
