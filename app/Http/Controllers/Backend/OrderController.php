@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
@@ -94,15 +97,79 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled'
+            'status' => 'required|in:pending,processing,completed,cancelled',
+            'refund' => 'sometimes|boolean'
         ]);
 
         $oldStatus = $order->status;
         $order->status = $request->status;
         
-        // If order is cancelled, set total_amount to 0
-        if ($request->status === 'cancelled') {
-            $order->total_amount = 0;
+        // Handle refund when cancelling
+        if ($request->status === 'cancelled' && $oldStatus !== 'cancelled') {
+            // Check if refund is requested and order has amount to refund
+            if ($request->has('refund') && $request->refund && $order->total_amount > 0) {
+                try {
+                    // Load user
+                    $user = $order->user;
+                    if ($user) {
+                        // Start a transaction
+                        DB::beginTransaction();
+                        
+                        // Get the refund amount
+                        $refundAmount = $order->total_amount;
+                        
+                        // Add amount to user balance
+                        $previousBalance = $user->balance;
+                        $user->balance += $refundAmount;
+                        $user->save();
+                        
+                        // Log the refund
+                        Log::info('Order refunded from admin panel:', [
+                            'order_id' => $order->id,
+                            'user_id' => $user->id,
+                            'refund_amount' => $refundAmount,
+                            'previous_balance' => $previousBalance,
+                            'new_balance' => $user->balance
+                        ]);
+                        
+                        // Add balance history record if method exists
+                        if (method_exists($user, 'recordBalanceChange')) {
+                            $user->recordBalanceChange(
+                                $refundAmount,
+                                'credit',
+                                'Refund for cancelled order #' . $order->id,
+                                'order_refund_' . $order->id
+                            );
+                        }
+                        
+                        // Mark order as refunded in notes or description field if available
+                        if (Schema::hasColumn('orders', 'notes')) {
+                            $order->notes = ($order->notes ? $order->notes . "\n" : '') . 
+                                "[" . now()->format('Y-m-d H:i:s') . "] Refunded $" . number_format($refundAmount, 2) . " to user";
+                        } elseif (Schema::hasColumn('orders', 'description')) {
+                            $order->description = ($order->description ? $order->description . "\n" : '') . 
+                                "[" . now()->format('Y-m-d H:i:s') . "] Refunded $" . number_format($refundAmount, 2) . " to user";
+                        }
+                        
+                        // Set total amount to 0 to indicate it's been refunded
+                        $order->total_amount = 0;
+                        
+                        DB::commit();
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    Log::error('Error refunding order:', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    
+                    return back()->with('error', 'Error processing refund: ' . $e->getMessage());
+                }
+            } else {
+                // If not refunding, just mark as cancelled
+                $order->total_amount = 0;
+            }
         }
         
         $order->save();
@@ -111,33 +178,119 @@ class OrderController extends Controller
         if ($request->ajax() || $request->wantsJson() || $request->header('X-HTTP-Method-Override')) {
             return response()->json([
                 'success' => true,
-                'message' => 'Order status updated successfully',
+                'message' => 'Order status updated successfully' . 
+                    ($request->has('refund') && $request->refund ? ' with refund' : ''),
                 'order' => $order
             ]);
         }
 
         // Regular request
-        return back()->with('success', 'Order status updated successfully');
+        $successMessage = 'Order status updated successfully';
+        if ($request->status === 'cancelled' && $request->has('refund') && $request->refund) {
+            $successMessage .= ' with refund to user';
+        }
+        
+        return back()->with('success', $successMessage);
     }
 
     public function bulkUpdate(Request $request)
     {
         $request->validate([
             'order_ids' => 'required|array',
-            'status' => 'required|in:pending,processing,completed,cancelled'
+            'status' => 'required|in:pending,processing,completed,cancelled',
+            'refund' => 'sometimes|boolean'
         ]);
 
         $orders = Order::whereIn('id', $request->order_ids)->get();
+        $refundedCount = 0;
         
-        foreach ($orders as $order) {
-            $order->status = $request->status;
-            if ($request->status === 'cancelled') {
-                $order->total_amount = 0;
+        // Use a transaction for all refunds
+        DB::beginTransaction();
+        
+        try {
+            foreach ($orders as $order) {
+                $oldStatus = $order->status;
+                $order->status = $request->status;
+                
+                // Handle refund when cancelling
+                if ($request->status === 'cancelled' && $oldStatus !== 'cancelled') {
+                    // Check if refund is requested and order has amount to refund
+                    if ($request->has('refund') && $request->refund && $order->total_amount > 0) {
+                        // Load user
+                        $user = $order->user;
+                        if ($user) {
+                            // Get the refund amount
+                            $refundAmount = $order->total_amount;
+                            
+                            // Add amount to user balance
+                            $previousBalance = $user->balance;
+                            $user->balance += $refundAmount;
+                            $user->save();
+                            
+                            // Log the refund
+                            Log::info('Order refunded from bulk operation:', [
+                                'order_id' => $order->id,
+                                'user_id' => $user->id,
+                                'refund_amount' => $refundAmount,
+                                'previous_balance' => $previousBalance,
+                                'new_balance' => $user->balance
+                            ]);
+                            
+                            // Add balance history record if method exists
+                            if (method_exists($user, 'recordBalanceChange')) {
+                                $user->recordBalanceChange(
+                                    $refundAmount,
+                                    'credit',
+                                    'Refund for cancelled order #' . $order->id,
+                                    'order_refund_' . $order->id
+                                );
+                            }
+                            
+                            // Mark order as refunded in notes or description field if available
+                            if (Schema::hasColumn('orders', 'notes')) {
+                                $order->notes = ($order->notes ? $order->notes . "\n" : '') . 
+                                    "[" . now()->format('Y-m-d H:i:s') . "] Refunded $" . number_format($refundAmount, 2) . " to user";
+                            } elseif (Schema::hasColumn('orders', 'description')) {
+                                $order->description = ($order->description ? $order->description . "\n" : '') . 
+                                    "[" . now()->format('Y-m-d H:i:s') . "] Refunded $" . number_format($refundAmount, 2) . " to user";
+                            }
+                            
+                            $refundedCount++;
+                            
+                            // Set total amount to 0 to indicate it's been refunded
+                            $order->total_amount = 0;
+                        }
+                    } else {
+                        // If not refunding, just mark as cancelled
+                        $order->total_amount = 0;
+                    }
+                }
+                
+                $order->save();
             }
-            $order->save();
+            
+            DB::commit();
+            
+            $message = 'Orders updated successfully';
+            if ($refundedCount > 0) {
+                $message .= " with {$refundedCount} refunds processed";
+            }
+            
+            return response()->json(['success' => true, 'message' => $message]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Error processing bulk order update with refunds:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false, 
+                'message' => 'Error updating orders: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['success' => true, 'message' => 'Orders updated successfully']);
     }
 
     public function export(Request $request)

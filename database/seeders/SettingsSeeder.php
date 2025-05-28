@@ -47,6 +47,8 @@ class SettingsSeeder extends Seeder
 
             // Account Limits
             'facebook_account_daily_use_limit' => 4,
+            'facebook_reset_last_run' => null,
+            
             // Terms and Privacy
             'terms_content' => 'Your terms and conditions content here.',
             'privacy_content' => 'Your privacy policy content here.',

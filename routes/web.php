@@ -45,11 +45,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/create/{service}', [OrderController::class, 'create'])->name('orders.create');
     Route::post('/orders/{service}', [OrderController::class, 'store'])->name('orders.store');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
-    Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
-    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-    Route::patch('/orders/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
+    Route::get('/order/{order}', [OrderController::class, 'show'])->name('orders.show');
+    
+    Route::get('/order/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+    Route::patch('/order/{order}', [OrderController::class, 'update'])->name('orders.update');
+    Route::post('/order/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::patch('/order/{order}/uid', [OrderController::class, 'updateUid'])->name('orders.update-uid');
     
     // Mass order routes
     Route::get('/orders/mass-create/{service}', [OrderController::class, 'massCreate'])->name('orders.mass-create');
@@ -76,6 +77,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::get('/api/docs', function () {
         return view('backend.api.docs');
     })->name('api.docs');
+
+    // Facebook Status Routes
+    Route::get('/facebook/status', [\App\Http\Controllers\Backend\FacebookStatusController::class, 'getStatus'])
+        ->name('facebook.status');
+    Route::post('/facebook/reset-counts', [\App\Http\Controllers\Backend\FacebookStatusController::class, 'resetCounts'])
+        ->name('facebook.reset-counts');
 
     // Submission Batch Routes
     Route::get('submission-batch/{submissionBatch}/update-count', [\App\Http\Controllers\Backend\SubmissionBatchController::class, 'updateCount'])

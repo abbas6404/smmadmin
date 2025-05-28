@@ -406,7 +406,10 @@ class OrderController extends Controller
             return redirect()->route('services')->with('error', 'This service is currently unavailable.');
         }
 
-        return view('frontend.orders.mass-create', compact('service'));
+        // Fetch all active services
+        $services = Service::where('status', 'active')->orderBy('name')->get();
+
+        return view('frontend.orders.mass-create', compact('service', 'services'));
     }
 
     public function massStore(Request $request, Service $service)
@@ -454,8 +457,11 @@ class OrderController extends Controller
             // Determine the price to use (custom rate or service price)
             $price = $user->custom_rate ?? $service->price;
             
+            // Get the quantity (same for all orders)
+            $quantity = $request->quantity;
+            
             // Calculate total amount for all orders
-            $totalAmount = ($price * $request->quantity * count($links)) / 1000;
+            $totalAmount = ($price * $quantity * count($links)) / 1000;
             
             // Check if user has sufficient balance
             if ($user->balance < $totalAmount) {
@@ -490,12 +496,12 @@ class OrderController extends Controller
                     'user_id' => $userId,
                     'service_id' => $service->id,
                     'link' => $link,
-                    'quantity' => $request->quantity,
+                    'quantity' => $quantity,
                     'price' => $price,
-                    'total_amount' => ($price * $request->quantity) / 1000,
+                    'total_amount' => ($price * $quantity) / 1000,
                     'status' => 'pending',
                     'description' => $request->description,
-                    'remains' => ceil($request->quantity * 1.15), // Add 15% more to remains
+                    'remains' => ceil($quantity * 1.15), // Add 15% more to remains
                 ];
                 
                 // For Facebook links, try to extract UID automatically
@@ -523,7 +529,7 @@ class OrderController extends Controller
             }
 
             if (empty($orders)) {
-                throw new \Exception('No valid orders were created.');
+                throw new \Exception('No valid orders were created. Please check your input format.');
             }
 
             // Deduct total amount from user's balance
@@ -531,6 +537,9 @@ class OrderController extends Controller
             $user->save();
 
             DB::commit();
+            
+            // Store order IDs in session for mass details page
+            session(['orderIds' => collect($orders)->pluck('id')->toArray()]);
 
             return redirect()->route('orders.index')
                 ->with('success', count($orders) . ' orders placed successfully! Your balance has been updated.');
@@ -580,12 +589,25 @@ class OrderController extends Controller
                 return response()->json(['error' => 'Only pending or processing orders can be updated'], 422);
             }
 
+            // Log the request data for debugging
+            Log::info('Updating UID for order', [
+                'order_id' => $order->id, 
+                'request_data' => $request->all(),
+                'content_type' => $request->header('Content-Type')
+            ]);
+
             $request->validate([
                 'link_uid' => 'required|string|max:255'
             ]);
 
-            $order->link_uid = $request->link_uid;
+            // Cast to string explicitly to handle any numeric input
+            $order->link_uid = (string) $request->link_uid;
             $order->save();
+            
+            Log::info('Successfully updated UID for order', [
+                'order_id' => $order->id,
+                'link_uid' => $order->link_uid
+            ]);
             
             // Check if it's an AJAX request
             if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {
@@ -602,7 +624,8 @@ class OrderController extends Controller
             Log::error('Failed to update UID:', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
             ]);
             
             if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With')) {

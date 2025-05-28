@@ -295,6 +295,32 @@
                                 </div>
                             </div>
                         @endif
+                        
+                        @if($order->status === 'cancelled' && $order->total_amount == 0)
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-info"></div>
+                                <div class="timeline-content">
+                                    <h6 class="timeline-title">Order Cancelled with Refund</h6>
+                                    <p class="timeline-text">{{ $order->updated_at->format('Y-m-d H:i:s') }}</p>
+                                </div>
+                            </div>
+                        @endif
+                        
+                        @if(isset($order->notes) && !empty($order->notes))
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-secondary"></div>
+                                <div class="timeline-content">
+                                    <h6 class="timeline-title">Notes</h6>
+                                    <div class="timeline-text">
+                                        @foreach(explode("\n", $order->notes) as $note)
+                                            <p class="{{ str_contains(strtolower($note), 'refund') ? 'text-info' : '' }}">
+                                                {{ $note }}
+                                            </p>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -374,13 +400,31 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">New Status</label>
-                        <select name="status" class="form-select" required>
+                        <select name="status" class="form-select" id="status-select" required>
                             <option value="">Select Status</option>
                             <option value="pending" {{ old('status', $order->status) === 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="processing" {{ old('status', $order->status) === 'processing' ? 'selected' : '' }}>Processing</option>
                             <option value="completed" {{ old('status', $order->status) === 'completed' ? 'selected' : '' }}>Completed</option>
                             <option value="cancelled" {{ old('status', $order->status) === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         </select>
+                    </div>
+                    
+                    <div class="mb-3 refund-option" style="display: none;">
+                        @if($order->total_amount > 0)
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="refund" id="refund-checkbox" value="1" checked>
+                                <label class="form-check-label" for="refund-checkbox">
+                                    Refund user's balance (${{ number_format($order->total_amount, 2) }})
+                                </label>
+                            </div>
+                            <div class="alert alert-info mt-2">
+                                <small><i class="fas fa-info-circle me-1"></i> When checked, the order amount will be credited back to the user's balance.</small>
+                            </div>
+                        @else
+                            <div class="alert alert-warning">
+                                <small><i class="fas fa-exclamation-triangle me-1"></i> This order has no amount to refund or has already been refunded.</small>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -501,8 +545,69 @@
 <script>
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        alert('Link copied to clipboard!');
+        showToast('Copied to clipboard!', 'success');
     });
 }
+
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Initialize Bootstrap toast
+    const bsToast = new bootstrap.Toast(toast, {
+        autohide: true,
+        delay: 3000
+    });
+    
+    bsToast.show();
+    
+    // Remove the toast element after it's hidden
+    toast.addEventListener('hidden.bs.toast', function() {
+        toast.remove();
+    });
+}
+
+// Show/hide refund option when status changes
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status-select');
+    const refundOption = document.querySelector('.refund-option');
+    
+    function toggleRefundOption() {
+        if (statusSelect.value === 'cancelled') {
+            refundOption.style.display = 'block';
+        } else {
+            refundOption.style.display = 'none';
+        }
+    }
+    
+    // Set initial state
+    toggleRefundOption();
+    
+    // Add change event listener
+    statusSelect.addEventListener('change', toggleRefundOption);
+});
 </script>
 @endsection 

@@ -94,32 +94,52 @@
                             </div>
                             <div>
                                 <h5 class="alert-heading">How to Place Mass Orders</h5>
-                                <p>Use the format: <code>service_id|link|quantity</code> - one order per line.</p>
-                                <p class="mb-0">Example: <code>12|https://example.com/post|1000</code></p>
+                                <p>Enter one link per line. The same quantity will be applied to all links.</p>
+                                <p class="mb-0">Example: <code>https://example.com/post1</code><br><code>https://example.com/post2</code></p>
                             </div>
                         </div>
                     </div>
 
-                    <form action="{{ route('orders.mass-store') }}" method="POST" id="massOrderForm">
+                    <form action="{{ route('orders.mass-store', $service) }}" method="POST" id="massOrderForm">
                         @csrf
                         
                         <div class="row mb-4">
                             <div class="col-md-8">
                                 <div class="mb-4">
-                                    <label for="orders" class="form-label fw-medium">Mass Orders <span class="text-danger">*</span></label>
+                                    <label for="links" class="form-label fw-medium">Links <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-transparent border-end-0">
-                                            <i class="fas fa-list-ol text-primary"></i>
+                                            <i class="fas fa-link text-primary"></i>
                                         </span>
-                                        <textarea class="form-control @error('orders') is-invalid @enderror border-start-0 ps-0" 
-                                            id="orders" name="orders" rows="10" 
-                                            placeholder="service_id|link|quantity">{{ old('orders') }}</textarea>
-                                        @error('orders')
+                                        <textarea class="form-control @error('links') is-invalid @enderror border-start-0 ps-0" 
+                                            id="links" name="links" rows="10" 
+                                            placeholder="https://example.com/post1&#10;https://example.com/post2">{{ old('links') }}</textarea>
+                                        @error('links')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     <div class="form-text">
-                                        <i class="fas fa-info-circle me-1"></i> Enter one order per line in the format: service_id|link|quantity
+                                        <i class="fas fa-info-circle me-1"></i> Enter one link per line
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="quantity" class="form-label fw-medium">Quantity <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-transparent border-end-0">
+                                                <i class="fas fa-sort-numeric-up text-primary"></i>
+                                            </span>
+                                            <input type="number" class="form-control @error('quantity') is-invalid @enderror border-start-0 ps-0" 
+                                                id="quantity" name="quantity" value="{{ old('quantity', $service->min_quantity) }}" 
+                                                min="{{ $service->min_quantity }}" max="{{ $service->max_quantity }}">
+                                            @error('quantity')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i> Min: {{ $service->min_quantity }}, Max: {{ $service->max_quantity }}
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -299,7 +319,7 @@
             });
         @endif
 
-        const ordersTextarea = document.getElementById('orders');
+        const linksTextarea = document.getElementById('links');
         const totalOrdersElement = document.getElementById('totalOrders');
         const totalQuantityElement = document.getElementById('totalQuantity');
         const totalAmountElement = document.getElementById('totalAmount');
@@ -315,61 +335,42 @@
         // Make service rows clickable to add to textarea
         serviceRows.forEach(row => {
             row.addEventListener('click', function() {
-                const serviceId = this.dataset.id;
-                const minQuantity = this.dataset.min;
-                
-                // Add a new line with the service ID template
-                const currentText = ordersTextarea.value;
+                // Add a new line with the link template
+                const currentText = linksTextarea.value;
                 const newLine = currentText ? '\n' : '';
-                ordersTextarea.value += `${newLine}${serviceId}|https://|${minQuantity}`;
+                linksTextarea.value += `${newLine}https://`;
                 
                 // Focus and move cursor to end
-                ordersTextarea.focus();
-                ordersTextarea.setSelectionRange(ordersTextarea.value.length, ordersTextarea.value.length);
+                linksTextarea.focus();
+                linksTextarea.setSelectionRange(linksTextarea.value.length, linksTextarea.value.length);
                 
                 // Trigger calculation
                 calculateTotals();
             });
         });
         
-        // Calculate totals when orders textarea changes
-        ordersTextarea.addEventListener('input', calculateTotals);
+        // Calculate totals when links textarea or quantity changes
+        linksTextarea.addEventListener('input', calculateTotals);
+        document.getElementById('quantity').addEventListener('input', calculateTotals);
         
         // Initial calculation
         calculateTotals();
         
         function calculateTotals() {
-            const lines = ordersTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+            const lines = linksTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+            const quantity = parseInt(document.getElementById('quantity').value) || 0;
+            
             let totalOrders = lines.length;
-            let totalQuantity = 0;
+            let totalQuantity = totalOrders * quantity;
             let totalAmount = 0;
             
-            // Create a map of service prices
-            const servicePrices = new Map();
-            serviceRows.forEach(row => {
-                const serviceId = row.dataset.id;
-                const priceText = row.querySelector('td:last-child').textContent.trim().replace('$', '');
-                const price = parseFloat(priceText);
-                servicePrices.set(serviceId, price);
-            });
-            
-            // Process each line
-            lines.forEach(line => {
-                const parts = line.split('|');
-                if (parts.length >= 3) {
-                    const serviceId = parts[0].trim();
-                    const quantity = parseInt(parts[2].trim()) || 0;
+            // Get the current service price
+            const servicePrice = {{ $service->price }};
+            const customRate = {{ auth()->user()->custom_rate ?? 'null' }};
+            const price = customRate !== null ? customRate : servicePrice;
                     
-                    totalQuantity += quantity;
-                    
-                    // Calculate cost if service price is available
-                    if (servicePrices.has(serviceId)) {
-                        const price = servicePrices.get(serviceId);
-                        const cost = (quantity * price) / 1000;
-                        totalAmount += cost;
-                    }
-                }
-            });
+            // Calculate total cost
+            totalAmount = (totalQuantity * price) / 1000;
             
             // Update display
             totalOrdersElement.textContent = totalOrders.toLocaleString();
@@ -384,7 +385,7 @@
             remainingBalanceElement.className = remainingBalance < 0 ? 'fw-bold text-danger' : 'fw-bold text-primary';
             
             // Disable submit button if remaining balance is negative or no orders
-            submitButton.disabled = remainingBalance < 0 || totalOrders === 0;
+            submitButton.disabled = remainingBalance < 0 || totalOrders === 0 || quantity < {{ $service->min_quantity }} || quantity > {{ $service->max_quantity }};
             
             if (remainingBalance < 0) {
                 submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Insufficient Balance';
@@ -394,6 +395,10 @@
                 submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Place Mass Order';
                 submitButton.classList.remove('btn-danger');
                 submitButton.classList.add('btn-primary');
+            } else if (quantity < {{ $service->min_quantity }} || quantity > {{ $service->max_quantity }}) {
+                submitButton.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Invalid Quantity';
+                submitButton.classList.remove('btn-primary');
+                submitButton.classList.add('btn-danger');
             } else {
                 submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Place Mass Order';
                 submitButton.classList.remove('btn-danger');
@@ -424,7 +429,7 @@
         
         // Form submission validation
         massOrderForm.addEventListener('submit', function(event) {
-            const lines = ordersTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+            const lines = linksTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
             
             if (lines.length === 0) {
                 event.preventDefault();
@@ -442,8 +447,7 @@
             let invalidLines = [];
             
             lines.forEach((line, index) => {
-                const parts = line.split('|');
-                if (parts.length < 3) {
+                if (!line.trim() || !line.includes('http')) {
                     hasInvalidFormat = true;
                     invalidLines.push(`Line ${index + 1}: ${line}`);
                 }
@@ -455,7 +459,7 @@
                     title: 'Invalid Format',
                     html: 'The following lines have invalid format:<br><br>' +
                           '<code>' + invalidLines.join('<br>') + '</code><br><br>' +
-                          'Please use the format: <code>service_id|link|quantity</code>',
+                          'Please enter valid URLs.',
                     icon: 'error',
                     confirmButtonColor: '#dc3545'
                 });

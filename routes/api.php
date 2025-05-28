@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\FacebookAccountController;
 use App\Http\Controllers\Api\UpdateFacebookAccountController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\FacebookQuickCheckController;
+use App\Http\Controllers\Api\FacebookUidController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +34,9 @@ Route::post('/update-facebook-account', [UpdateFacebookAccountController::class,
 
 // Order Routes
 Route::get('/orders', [OrderController::class, 'getOrders']);
+
+// Facebook UID Extraction
+Route::post('/extract-facebook-uid', [FacebookUidController::class, 'extractUid']);
 
 /*
 |--------------------------------------------------------------------------

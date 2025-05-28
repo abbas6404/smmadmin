@@ -292,7 +292,7 @@
                                                     autocomplete="off">
                                                 <button type="submit" class="btn btn-outline-primary btn-sm" title="Save UID">
                                                     <i class="fas fa-save"></i>
-                                        </button>
+                                                </button>
                                             </form>
                                         </div>
                                     @else
@@ -309,6 +309,13 @@
                                                 </button>
                                             </form>
                                         </div>
+                                    @endif
+                                    @if(strpos($order->link, 'facebook.com') !== false || strpos($order->link, 'fb.com') !== false)
+                                        <button class="btn btn-outline-info btn-sm w-100 mt-1" 
+                                                onclick="extractFacebookUid('{{ $order->id }}', '{{ $order->link }}')" 
+                                                title="Auto-extract Facebook UID">
+                                            <i class="fab fa-facebook me-1"></i> Auto-Extract UID
+                                        </button>
                                     @endif
                                 </td>
                                 <td>{{ number_format($order->quantity ?? 0) }}</td>
@@ -561,6 +568,75 @@ function setupEditableForms() {
     });
 }
 
+function extractFacebookUid(orderId, link) {
+    // Find the input field for this order
+    const row = document.querySelector(`input[type="checkbox"].order-checkbox[value="${orderId}"]`).closest('tr');
+    const uidInput = row.querySelector('input[name="link_uid"]');
+    const saveBtn = row.querySelector('button[type="submit"]');
+    
+    // Disable the extract button to prevent multiple clicks
+    const extractBtn = row.querySelector('button[onclick*="extractFacebookUid"]');
+    extractBtn.disabled = true;
+    extractBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting...';
+    
+    // Show extracting toast
+    showToast('Extracting Facebook UID...', 'info');
+    
+    // Make the API request to extract the UID
+    fetch('/api/extract-facebook-uid', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            link: link
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to connect to UID extraction service: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('UID extraction response:', data);
+        
+        if (!data.success || !data.uid) {
+            throw new Error(data.message || 'Failed to extract UID');
+        }
+        
+        // Update the UID input field
+        uidInput.value = data.uid;
+        
+        // Highlight the input field
+        uidInput.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            uidInput.style.backgroundColor = '';
+        }, 1000);
+        
+        // Show success toast
+        showToast('Facebook UID extracted successfully: ' + data.uid, 'success');
+        
+        // Trigger a click on the save button
+        saveBtn.click();
+        
+        return data.uid;
+    })
+    .catch(error => {
+        console.error('Error extracting UID:', error);
+        
+        // Show error toast
+        showToast(error.message || 'Failed to extract UID', 'danger');
+    })
+    .finally(() => {
+        // Re-enable the extract button
+        extractBtn.disabled = false;
+        extractBtn.innerHTML = '<i class="fab fa-facebook me-1"></i> Auto-Extract UID';
+    });
+}
+
 function showToast(message, type = 'info') {
     const toastContainer = document.querySelector('.toast-container');
     
@@ -621,10 +697,77 @@ function bulkAction(action) {
         return;
     }
 
-    if (!confirm('Are you sure you want to cancel the selected orders?')) return;
+    // For cancel action, show refund option
+    if (action === 'cancelled') {
+        // Create a confirmation dialog with refund option
+        const confirmationHtml = `
+            <div class="modal fade" id="bulkCancelConfirmModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Bulk Cancellation</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to cancel the selected orders (${selectedOrders.length})?</p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="bulkRefundCheckbox" checked>
+                                <label class="form-check-label" for="bulkRefundCheckbox">
+                                    Refund users' balances
+                                </label>
+                            </div>
+                            <div class="alert alert-info">
+                                <small><i class="fas fa-info-circle me-1"></i> When checked, the order amounts will be credited back to the users' balances. Only orders with amounts greater than $0 will be refunded.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmBulkCancelBtn">
+                                Yes, Cancel Orders
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Append the modal to the body
+        document.body.insertAdjacentHTML('beforeend', confirmationHtml);
+        
+        // Show the modal
+        const modalElement = document.getElementById('bulkCancelConfirmModal');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        // Handle confirmation button click
+        document.getElementById('confirmBulkCancelBtn').addEventListener('click', function() {
+            const refund = document.getElementById('bulkRefundCheckbox').checked;
+            
+            // Hide the modal
+            modal.hide();
+            
+            // Process the bulk action with refund option
+            processBulkAction(selectedOrders, action, refund);
+            
+            // Remove the modal from the DOM after hiding
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                modalElement.remove();
+            });
+        });
+    } else {
+        // For other actions, just show a simple confirmation
+        if (!confirm(`Are you sure you want to update the selected orders to ${action}?`)) return;
+        
+        processBulkAction(selectedOrders, action, false);
+    }
+}
 
+function processBulkAction(orderIds, status, refund) {
     // Get CSRF token from meta tag
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Show processing toast
+    showToast(`Processing ${orderIds.length} orders...`, 'info');
 
     fetch('/admin/orders/bulk-update', {
         method: 'POST',
@@ -634,8 +777,9 @@ function bulkAction(action) {
             'Accept': 'application/json'
         },
         body: JSON.stringify({
-            order_ids: selectedOrders,
-            status: action
+            order_ids: orderIds,
+            status: status,
+            refund: refund
         })
     })
     .then(response => {
@@ -646,7 +790,11 @@ function bulkAction(action) {
     })
     .then(data => {
         if (data.success) {
-            window.location.reload();
+            showToast(data.message || 'Orders updated successfully', 'success');
+            // Reload after a short delay to show the toast
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
             showToast(data.message || 'An error occurred while updating orders', 'danger');
         }

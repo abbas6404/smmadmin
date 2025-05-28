@@ -85,7 +85,7 @@
                             <div class="card-body">
                                 <p>If our tool can't extract the UID, you can try these external services:</p>
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="card mb-2">
                                             <div class="card-body">
                                                 <h5 class="card-title">Lookup-ID.com</h5>
@@ -96,12 +96,23 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="card mb-2">
                                             <div class="card-body">
                                                 <h5 class="card-title">GetUID.live</h5>
                                                 <p class="card-text">Alternative tool for extracting Facebook UIDs</p>
                                                 <a href="https://getuid.live/" target="_blank" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-external-link-alt me-1"></i> Visit Website
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card mb-2">
+                                            <div class="card-body">
+                                                <h5 class="card-title">CommentPicker</h5>
+                                                <p class="card-text">Reliable Facebook ID finder tool</p>
+                                                <a href="https://commentpicker.com/find-facebook-id.php" target="_blank" class="btn btn-primary btn-sm">
                                                     <i class="fas fa-external-link-alt me-1"></i> Visit Website
                                                 </a>
                                             </div>

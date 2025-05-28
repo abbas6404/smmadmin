@@ -198,17 +198,26 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <a href="{{ $order->link }}" target="_blank" rel="noopener noreferrer" class="text-primary text-decoration-none">
-                                        <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ $order->link }}">
+                                <div class="link-container">
+                                    <a href="{{ $order->link }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 150px;" data-bs-toggle="tooltip" title="{{ $order->link }}">
                                             {{ $order->link }}
-                                        </span>
-                                        <i class="fas fa-external-link-alt ms-1 small"></i>
                                     </a>
-                                    <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ $order->link }}')">
+                                    <div class="link-actions">
+                                        <a href="{{ $order->link }}" target="_blank" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="tooltip" title="Open link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                        <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyToClipboard('{{ $order->link }}')" data-bs-toggle="tooltip" title="Copy link">
                                         <i class="fas fa-copy"></i>
                                     </button>
+                                    </div>
                                 </div>
+                                @if($order->link_uid)
+                                <div class="mt-1">
+                                    <small class="text-muted">UID: 
+                                        <span class="badge bg-light text-dark">{{ $order->link_uid }}</span>
+                                    </small>
+                                </div>
+                                @endif
                             </td>
                             <td>{{ number_format($order->quantity) }}</td>
                             <td>
@@ -316,121 +325,89 @@
 .card:hover {
     transform: translateY(-2px);
 }
+.link-container {
+    position: relative;
+    max-width: 200px;
+}
+
+.link-container:hover .link-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
+.link-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.copy-btn {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.7rem;
+}
+
+@media (max-width: 768px) {
+    .link-actions {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+.badge.bg-light {
+    font-family: monospace;
+}
 </style>
 @endpush
 
 @push('scripts')
 <script>
-$(document).ready(function() {
-    // Add CSRF token to all AJAX requests
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-
-    // Daily Order Limit Notification
-    @php
-        $dailyOrderLimit = auth()->user()->daily_order_limit > 0 ? auth()->user()->daily_order_limit : 100;
-        $todayOrderCount = \App\Models\Order::where('user_id', auth()->id())->whereDate('created_at', now()->toDateString())->count();
-        $remainingOrders = $dailyOrderLimit - $todayOrderCount;
-        $usedOrders = $todayOrderCount;
-        $orderLimitPercentage = ($dailyOrderLimit > 0) ? ($usedOrders / $dailyOrderLimit) * 100 : 0;
-    @endphp
+    // Toast notification container
+    if (!document.getElementById('toastContainer')) {
+        const toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
     
-    @if($remainingOrders <= 0 && $dailyOrderLimit > 0)
-        Swal.fire({
-            title: 'Daily Order Limit Reached!',
-            html: '<div class="text-center mb-3"><i class="fas fa-exclamation-circle text-danger fa-4x"></i></div>' +
-                  '<p>You\'ve used all of your {{ $dailyOrderLimit }} orders for today.</p>' +
-                  '<p>Your limit will reset tomorrow.</p>',
-            icon: 'error',
-            confirmButtonText: 'Got it',
-            confirmButtonColor: '#dc3545'
-        });
-    @elseif($remainingOrders <= 2 && $dailyOrderLimit > 0)
-        Swal.fire({
-            title: 'Almost at Daily Limit!',
-            html: '<div class="text-center mb-3"><i class="fas fa-exclamation-triangle text-warning fa-4x"></i></div>' +
-                  '<p>You have only <strong>{{ $remainingOrders }}</strong> orders remaining out of your daily limit of {{ $dailyOrderLimit }}.</p>' +
-                  '<div class="progress mt-3" style="height: 10px;">' +
-                  '  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $orderLimitPercentage }}%"></div>' +
-                  '</div>',
-            icon: 'warning',
-            confirmButtonText: 'Understood',
-            confirmButtonColor: '#ffc107'
-        });
-    @endif
-
-    // Function to copy text to clipboard
-    window.copyToClipboard = function(text) {
-        // Fallback for older browsers
-        if (!navigator.clipboard) {
-            var textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";  // Avoid scrolling to bottom
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                var successful = document.execCommand('copy');
-                var msg = successful ? 'Copied to clipboard!' : 'Failed to copy text';
-                showToast(msg, successful ? 'success' : 'danger');
-            } catch (err) {
-                showToast('Failed to copy text', 'danger');
-            }
-
-            document.body.removeChild(textArea);
-            return;
-        }
-
-        navigator.clipboard.writeText(text).then(() => {
+    function copyToClipboard(text) {
+        const tempInput = document.createElement('input');
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        
             // Show toast notification
-            showToast('Copied to clipboard!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            showToast('Failed to copy text', 'danger');
-        });
-    };
-    
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        const toastContainer = document.getElementById('toastContainer');
-        
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        toast.innerHTML = `
+        const toast = `
+            <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
-                    ${message}
+                        <i class="fas fa-check-circle me-2"></i> Copied to clipboard!
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Initialize the Bootstrap toast
-        const bsToast = new bootstrap.Toast(toast, {
-            autohide: true,
-            delay: 3000
-        });
-        
+        const toastContainer = document.getElementById('toastContainer');
+        toastContainer.innerHTML = toast;
+        const toastElement = toastContainer.querySelector('.toast');
+        const bsToast = new bootstrap.Toast(toastElement, { delay: 2000 });
         bsToast.show();
-        
-        // Remove the toast element after it's hidden
-        toast.addEventListener('hidden.bs.toast', function() {
-            toast.remove();
-        });
     }
-
-    // Status update functionality removed
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
 });
 </script>
 @endpush 
